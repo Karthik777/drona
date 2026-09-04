@@ -1,0 +1,14 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "drona"
+  site-url: "https://Karthik777.github.io/drona"
+  description: "train agents to choose and use the right tools"
+  repo-branch: main
+  repo-url: "https://github.com/Karthik777/drona"
+
+format-links:
+  - html
+  - format: commonmark
+    text: Markdown
