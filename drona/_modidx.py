@@ -32,4 +32,9 @@ d = { 'settings': { 'branch': 'main',
                               'drona.rounds.latest_session': ('rounds.html#latest_session', 'drona/rounds.py'),
                               'drona.rounds.start_cli': ('rounds.html#start_cli', 'drona/rounds.py'),
                               'drona.rounds.start_commands': ('rounds.html#start_commands', 'drona/rounds.py'),
-                              'drona.rounds.start_round': ('rounds.html#start_round', 'drona/rounds.py')}}}
+                              'drona.rounds.start_round': ('rounds.html#start_round', 'drona/rounds.py')},
+            'drona.sessions': { 'drona.sessions.clean_dialog': ('sessions.html#clean_dialog', 'drona/sessions.py'),
+                                'drona.sessions.export_cli': ('sessions.html#export_cli', 'drona/sessions.py'),
+                                'drona.sessions.export_session': ('sessions.html#export_session', 'drona/sessions.py'),
+                                'drona.sessions.import_cli': ('sessions.html#import_cli', 'drona/sessions.py'),
+                                'drona.sessions.import_session': ('sessions.html#import_session', 'drona/sessions.py')}}}

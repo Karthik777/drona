@@ -65,6 +65,26 @@ drona-start training/github-research.ipynb --root /path/to/project --launch
 
 Ramabana receives the accepted round as its first bootstrap turn and saves it. Drona then resumes that session. Leela can use [`compiled_history`](https://Karthik777.github.io/drona/rounds.html#compiled_history) directly when it adds prepared-history support.
 
+## Move sessions between hosts
+
+Aidialog notebooks are the interchange format. Ramabana, Claude, and Codex sessions can all be imported for review in Leela.
+
+``` sh
+drona-import ramabana training/round.ipynb --session latest
+drona-import claude training/round.ipynb --session latest --cwd /path/to/project
+drona-import codex training/round.ipynb --session latest --cwd /path/to/project
+```
+
+The same reviewed notebook can become a Ramabana bootstrap, a resumable Claude session, or Codex-native Responses items.
+
+``` sh
+drona-export training/round.ipynb ramabana --output training/round.txt
+drona-export training/round.ipynb claude --cwd /path/to/project
+drona-export training/round.ipynb codex --output training/round-items.json
+```
+
+Claude Code can resume the id printed by the Claude export. Codex export does not create a resumable rollout because llmsurgery has no public rollout writer. The exported items remain suitable for inspection, datasets, and a future Codex launcher.
+
 ## Develop
 
 ``` sh
