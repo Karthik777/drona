@@ -1,0 +1,222 @@
+[
+  {
+    "objectID": "rounds.html",
+    "href": "rounds.html",
+    "title": "rounds",
+    "section": "",
+    "text": "A capture reads completed Ramabana turns. It does not observe a live process. The output is an Aidialog notebook that Leela can open directly.\n\n\nsource\n\n\ndef capture(\n    output, # review notebook path\n    session:str='latest', # Ramabana session id, prefix, or `latest`\n    history:PosixPath=Path('/home/runner/.config/ramabana/agent-history.jsonl'), # Ramabana history path\n    name:NoneType=None, # round name; output stem when omitted\n):\nCapture one persisted Ramabana session as a review notebook.\n\n\n\n\nsource\n\n\ndef latest_session(\n    turns\n):\nThe newest session id in turns.\n\n\n\nimport tempfile\ncapture_dir = Path(tempfile.mkdtemp())\nhistory = capture_dir/'history.jsonl'\nturn = {\n    'session': 'agent_example', 'prompt': 'Use FOSSICK to research a GitHub repository.',\n    'reply': 'The repository says demonstrations improve tool use.',\n    'activity': [{'id': 'a1', 'tool': 'web_search', 'args': {'query': 'repo'},\n                  'detail': 'generic result', 'ok': True}],\n}\nhistory.write_text(json.dumps(turn) + '\\n')\nreview = capture(capture_dir/'github.ipynb', history=history)\ndlg = read_ipynb(review)\nassert dlg.meta[REVIEW_KEY]['status'] == 'review'\nassert dlg[0].skipped and dlg[1].msg_type == sprompt\nreview\n\nPath('/tmp/tmpyltpvldr/github.ipynb')",
+    "crumbs": [
+      "rounds"
+    ]
+  },
+  {
+    "objectID": "rounds.html#capture-a-saved-session",
+    "href": "rounds.html#capture-a-saved-session",
+    "title": "rounds",
+    "section": "",
+    "text": "A capture reads completed Ramabana turns. It does not observe a live process. The output is an Aidialog notebook that Leela can open directly.\n\n\nsource\n\n\ndef capture(\n    output, # review notebook path\n    session:str='latest', # Ramabana session id, prefix, or `latest`\n    history:PosixPath=Path('/home/runner/.config/ramabana/agent-history.jsonl'), # Ramabana history path\n    name:NoneType=None, # round name; output stem when omitted\n):\nCapture one persisted Ramabana session as a review notebook.\n\n\n\n\nsource\n\n\ndef latest_session(\n    turns\n):\nThe newest session id in turns.\n\n\n\nimport tempfile\ncapture_dir = Path(tempfile.mkdtemp())\nhistory = capture_dir/'history.jsonl'\nturn = {\n    'session': 'agent_example', 'prompt': 'Use FOSSICK to research a GitHub repository.',\n    'reply': 'The repository says demonstrations improve tool use.',\n    'activity': [{'id': 'a1', 'tool': 'web_search', 'args': {'query': 'repo'},\n                  'detail': 'generic result', 'ok': True}],\n}\nhistory.write_text(json.dumps(turn) + '\\n')\nreview = capture(capture_dir/'github.ipynb', history=history)\ndlg = read_ipynb(review)\nassert dlg.meta[REVIEW_KEY]['status'] == 'review'\nassert dlg[0].skipped and dlg[1].msg_type == sprompt\nreview\n\nPath('/tmp/tmpyltpvldr/github.ipynb')",
+    "crumbs": [
+      "rounds"
+    ]
+  },
+  {
+    "objectID": "rounds.html#accept-a-reviewed-round",
+    "href": "rounds.html#accept-a-reviewed-round",
+    "title": "rounds",
+    "section": "Accept a reviewed round",
+    "text": "Accept a reviewed round\nAcceptance is explicit. Drona validates the dialog round trip and records the reviewer, source session, package version, and round revision in notebook metadata.\n\n\nsource\n\naccept\ndef accept(\n    source, # reviewed dialog notebook\n    reviewer, # person accepting the round\n    output:NoneType=None, # compiled JSON path; `&lt;source&gt;.json` when omitted\n):\nAccept a reviewed dialog and write its canonical history.\n\n\n\n\nsource\n\ncompiled_history\ndef compiled_history(\n    source\n):\nCanonical Aidialog history from an accepted round.\n\n\n\ncompiled = accept(review, reviewer='Karthik')\naccepted = json.loads(compiled.read_text())\nassert accepted['meta']['status'] == 'accepted'\nhistory2 = compiled_history(review)\nassert history2[0].role == 'user'\nassert any(isinstance(p, ToolUse) for m in history2 for p in m.content)\ncompiled",
+    "crumbs": [
+      "rounds"
+    ]
+  },
+  {
+    "objectID": "rounds.html#start-a-ramabana-session",
+    "href": "rounds.html#start-a-ramabana-session",
+    "title": "rounds",
+    "section": "Start a Ramabana session",
+    "text": "Start a Ramabana session\nRamabana does not accept prepared history on its command line. start_round therefore sends the accepted round as a bootstrap prompt. Ramabana saves that turn, then Drona resumes the same session for normal work.\n\n\nsource\n\nstart_round\ndef start_round(\n    source, root:str='.', model:NoneType=None, launch:bool=False\n):\nPrepare or launch Ramabana with an accepted Drona round.\n\n\n\n\nsource\n\nstart_commands\ndef start_commands(\n    source, # accepted review notebook\n    root:str='.', # Ramabana root\n    model:NoneType=None, # optional model name\n):\nThe bootstrap and resume commands for an accepted round.\n\n\n\n\nsource\n\nbootstrap_prompt\ndef bootstrap_prompt(\n    source\n):\nA compact prompt containing one accepted worked round.\n\n\n\ncommands = start_round(review, root='/tmp/project')\nassert commands['bootstrap'][:3] == ['ramabana', '--root', '/tmp/project']\nassert commands['resume'][-1] == 'latest'\nassert commands['bootstrap'][-1].endswith('DRONA_READY')\ncommands",
+    "crumbs": [
+      "rounds"
+    ]
+  },
+  {
+    "objectID": "rounds.html#command-line",
+    "href": "rounds.html#command-line",
+    "title": "rounds",
+    "section": "Command line",
+    "text": "Command line\nThe command line separates capture, acceptance, and launch. start prints commands unless --launch is set.\n\n\nsource\n\nstart_cli\ndef start_cli(\n    source:str, root:str='.', model:str=None, launch:bool=False\n):\nPrepare or launch Ramabana with an accepted round.\n\n\n\n\nsource\n\naccept_cli\ndef accept_cli(\n    source:str, reviewer:str='', output:str=None\n):\nAccept a reviewed round and compile its history.\n\n\n\n\nsource\n\ncapture_cli\ndef capture_cli(\n    output:str, session:str='latest', history:str='/home/runner/.config/ramabana/agent-history.jsonl', name:str=None\n):\nCapture a saved Ramabana session for review.",
+    "crumbs": [
+      "rounds"
+    ]
+  },
+  {
+    "objectID": "sessions.html",
+    "href": "sessions.html",
+    "title": "sessions",
+    "section": "",
+    "text": "A Drona session is an Aidialog notebook. Imports convert host archives to that notebook. Exports compile the same notebook for another host.",
+    "crumbs": [
+      "sessions"
+    ]
+  },
+  {
+    "objectID": "sessions.html#import-a-session",
+    "href": "sessions.html#import-a-session",
+    "title": "sessions",
+    "section": "Import a session",
+    "text": "Import a session\nClaude and Codex use llmsurgery’s session reader. Ramabana uses its persisted activity archive. All three produce the same review notebook.\n\n\nsource\n\nimport_session\ndef import_session(\n    host, # `ramabana`, `claude`, or `codex`\n    output, # review notebook path\n    session:str='latest', # session id, prefix, or `latest`\n    cwd:NoneType=None, # project directory for Claude or newest-session lookup\n    history:NoneType=None, # Ramabana history path\n    codex_home:NoneType=None, # optional Codex home\n    name:NoneType=None, # dialog name\n):\nImport one host session as an Aidialog review notebook.\n\n\nThe host check is deliberately small and can be run without local Claude or Codex sessions.\n\nfrom fastcore.test import test_fail\n\ntest_fail(lambda: import_session('other', 'x.ipynb'), contains='host must be one of')",
+    "crumbs": [
+      "sessions"
+    ]
+  },
+  {
+    "objectID": "sessions.html#compile-one-dialog-for-each-host",
+    "href": "sessions.html#compile-one-dialog-for-each-host",
+    "title": "sessions",
+    "section": "Compile one dialog for each host",
+    "text": "Compile one dialog for each host\nRamabana consumes a bootstrap prompt because its CLI has no prepared-history argument. Claude receives a resumable native session. Codex receives native Responses API items; llmsurgery does not yet expose a rollout writer.\n\n\nsource\n\nexport_session\ndef export_session(\n    source, # Drona review notebook\n    host, # `ramabana`, `claude`, or `codex`\n    output:NoneType=None, # JSON output for Ramabana or Codex\n    cwd:NoneType=None, # Claude project directory\n):\nCompile one Drona notebook for a target host.\n\n\n\n\nsource\n\nclean_dialog\ndef clean_dialog(\n    source\n):\nPrompt messages from a Drona notebook, without review notes.",
+    "crumbs": [
+      "sessions"
+    ]
+  },
+  {
+    "objectID": "sessions.html#understand-the-common-dialog",
+    "href": "sessions.html#understand-the-common-dialog",
+    "title": "sessions",
+    "section": "Understand the common dialog",
+    "text": "Understand the common dialog\nThis synthetic dialog proves the portable part of the design. One prompt, one tool call, one result, and one final reply survive Aidialog and compile to Codex items.\n\nimport tempfile\nfrom aidialog.hist import chat2dlg\nfrom aidialog.msg_parts import Msg, Text, ToolUse, ToolResult\n\ntmp = Path(tempfile.mkdtemp())\ntool = ToolUse(id='call_1', name='search_code', arguments={'query': 'dialog history'})\nmsgs = [\n    Msg('user', [Text('Find the dialog history contract.')]),\n    Msg('assistant', [Text('I will inspect the implementation.'), tool]),\n    Msg('tool', [ToolResult(id=tool.id, name=tool.name, text='Chat.hist stores canonical messages.')]),\n    Msg('assistant', [Text('Urai uses canonical messages in Chat.hist.')]),\n]\ndlg = chat2dlg(msgs, 'portable', mx=None)\ndlg.meta[REVIEW_KEY] = {'status': 'accepted'}\nportable = tmp/'portable.ipynb'\nwrite_ipynb(dlg, portable)\nroundtrip = dlg2chat(clean_dialog(portable), plain=True)\nassert [m.role for m in roundtrip] == ['user', 'assistant', 'tool', 'assistant']\nassert roundtrip[1].content[-1].name == 'search_code'\nassert roundtrip[2].content[0].text == 'Chat.hist stores canonical messages.'\nroundtrip\n\n[Msg(role='user', content=[Text(raw=None, cache_control=None, text='Find the dialog history contract.', citations=None)], raw=None),\n Msg(role='assistant', content=[Text(raw=None, cache_control=None, text='I will inspect the implementation.', citations=None), ToolUse(raw=None, cache_control=None, id='call_1', name='search_code', arguments={'query': 'dialog history'}, server=False, text=None)], raw=None),\n Msg(role='tool', content=[ToolResult(raw=None, cache_control=None, id='call_1', name='search_code', arguments={}, server=False, text='Chat.hist stores canonical messages.')], raw=None),\n Msg(role='assistant', content=[Text(raw=None, cache_control=None, text='Urai uses canonical messages in Chat.hist.', citations=None)], raw=None)]\n\n\nCodex export keeps the same call id across the function call and its output.\n\nitems = export_session(portable, 'codex')\ncall = next(item for item in items if item['type'] == 'function_call')\nresult = next(item for item in items if item['type'] == 'function_call_output')\nassert call['call_id'] == result['call_id']\nassert call['name'] == 'search_code'\n[(item['type'], item.get('role') or item.get('name')) for item in items]\n\nClaude conversion is tested without writing into the real Claude session directory. dlg2msgs is the pure conversion used by dlg2sess.\n\nclaude_msgs = ant.dlg2msgs(clean_dialog(portable))\ncall = next(block for message in claude_msgs for block in message['content']\n            if block.get('type') == 'tool_use')\nresult = next(block for message in claude_msgs for block in message['content']\n              if block.get('type') == 'tool_result')\nassert call['id'] == result['tool_use_id']\nassert call['name'] == 'search_code'\n[(message['role'], [block['type'] for block in message['content']]) for message in claude_msgs]",
+    "crumbs": [
+      "sessions"
+    ]
+  },
+  {
+    "objectID": "sessions.html#what-can-move-today",
+    "href": "sessions.html#what-can-move-today",
+    "title": "sessions",
+    "section": "What can move today",
+    "text": "What can move today\nA Ramabana, Claude, or Codex session can become a Drona notebook. That notebook can become a resumable Claude session, a Ramabana bootstrap, or Codex-native items. Creating a resumable Codex rollout remains unavailable until llmsurgery exposes a writer.",
+    "crumbs": [
+      "sessions"
+    ]
+  },
+  {
+    "objectID": "sessions.html#command-line",
+    "href": "sessions.html#command-line",
+    "title": "sessions",
+    "section": "Command line",
+    "text": "Command line\n\n\nsource\n\nexport_cli\ndef export_cli(\n    source:str, host:str, output:str=None, cwd:str=None\n):\nCompile a review notebook for another host.\n\n\n\n\nsource\n\nimport_cli\ndef import_cli(\n    host:str, output:str, session:str='latest', cwd:str=None, history:str=None, codex_home:str=None, name:str=None\n):\nImport a host session as a review notebook.",
+    "crumbs": [
+      "sessions"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "drona",
+    "section": "",
+    "text": "Drona reads Ramabana session history, identifies poor tool routes, and creates a reviewed Urai history for the start of a new session.",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "drona",
+    "section": "Install",
+    "text": "Install\npip install drona",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "index.html#assess-ramabana-history",
+    "href": "index.html#assess-ramabana-history",
+    "title": "drona",
+    "section": "Assess Ramabana history",
+    "text": "Assess Ramabana history\nassess_turn scores observable tool actions. It does not infer quality from the assistant narrative.\n\nturn = {\n    'prompt': 'Use fossick to research https://github.com/AnswerDotAI/llmdojo',\n    'activity': [{'tool': 'web_search', 'ok': True, 'args': {'query': 'llmdojo'}}],\n}\nassessment = assess_turn(turn)\nassessment\n\nRun drona to assess the default Ramabana history. Pass --session to limit the report to one session.",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "index.html#prepare-a-chat",
+    "href": "index.html#prepare-a-chat",
+    "title": "drona",
+    "section": "Prepare a chat",
+    "text": "Prepare a chat\nwarm_start returns canonical Urai history. Pass it to any Urai or Rishi chat through messages=, or call prepare_chat on an empty chat.\n\nhistory = warm_start()\n[(message['role'], message.get('name')) for message in history]\n\nA completion receipt includes the package version and round revision. completion_valid rejects receipts from an older round.",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "index.html#curate-a-round",
+    "href": "index.html#curate-a-round",
+    "title": "drona",
+    "section": "Curate a round",
+    "text": "Curate a round\nRamabana already records completed turns. Capture reads that archive after the conversation ends. It does not monitor a live process.\nramabana --root /path/to/project\n# finish the useful conversation, then quit\ndrona-capture training/github-research.ipynb --session latest\nleela training\nOpen github-research.ipynb in Leela. Remove detours and sensitive content. Keep the route that future models should imitate. Save the notebook, then accept it with a reviewer name.\ndrona-accept training/github-research.ipynb --reviewer Karthik\nAcceptance updates the notebook metadata and writes github-research.json as derived canonical history. An unaccepted notebook cannot start a session.\ndrona-start prints the Ramabana bootstrap and resume commands by default. --launch runs them.\ndrona-start training/github-research.ipynb --root /path/to/project\ndrona-start training/github-research.ipynb --root /path/to/project --launch\nRamabana receives the accepted round as its first bootstrap turn and saves it. Drona then resumes that session. Leela can use compiled_history directly when it adds prepared-history support.",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "index.html#move-sessions-between-hosts",
+    "href": "index.html#move-sessions-between-hosts",
+    "title": "drona",
+    "section": "Move sessions between hosts",
+    "text": "Move sessions between hosts\nAidialog notebooks are the interchange format. Ramabana, Claude, and Codex sessions can all be imported for review in Leela.\ndrona-import ramabana training/round.ipynb --session latest\ndrona-import claude training/round.ipynb --session latest --cwd /path/to/project\ndrona-import codex training/round.ipynb --session latest --cwd /path/to/project\nThe same reviewed notebook can become a Ramabana bootstrap, a resumable Claude session, or Codex-native Responses items.\ndrona-export training/round.ipynb ramabana --output training/round.txt\ndrona-export training/round.ipynb claude --cwd /path/to/project\ndrona-export training/round.ipynb codex --output training/round-items.json\nClaude Code can resume the id printed by the Claude export. Codex export does not create a resumable rollout because llmsurgery has no public rollout writer. The exported items remain suitable for inspection, datasets, and a future Codex launcher.",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "index.html#develop",
+    "href": "index.html#develop",
+    "title": "drona",
+    "section": "Develop",
+    "text": "Develop\nuv sync --all-extras --group dev\nuv run nbdev-export\nuv run nbdev-test\nuv run nbdev-readme",
+    "crumbs": [
+      "drona"
+    ]
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "core",
+    "section": "",
+    "text": "source\n\n\ndef Assessment(\n    score:int, calls:int, findings:tuple\n)-&gt;None:\nThe route score and findings for one or more turns.\nsource\n\nFinding\ndef Finding(\n    kind:str, tool:str, index:int, message:str\n)-&gt;None:\nOne tool-route problem in a recorded turn.",
+    "crumbs": [
+      "core"
+    ]
+  },
+  {
+    "objectID": "core.html#read-ramabana-history",
+    "href": "core.html#read-ramabana-history",
+    "title": "core",
+    "section": "Read Ramabana history",
+    "text": "Read Ramabana history\nRamabana stores completed turns as JSON Lines. Each record contains an activity list with the tool name, arguments, result, duration, and status.\n\n\nsource\n\nread_history\ndef read_history(\n    path:PosixPath=Path('/home/runner/.config/ramabana/agent-history.jsonl'), # Ramabana `agent-history.jsonl` path\n    session:NoneType=None, # optional session id\n):\nRead completed Ramabana turns in append order.",
+    "crumbs": [
+      "core"
+    ]
+  },
+  {
+    "objectID": "core.html#assess-a-route",
+    "href": "core.html#assess-a-route",
+    "title": "core",
+    "section": "Assess a route",
+    "text": "Assess a route\nA route loses points for a generic GitHub search before FOSSICK, a malformed notebook edit, a command-line usage error, or a repeated failed action. A real failing test is not a command-line usage error.\n\n\nsource\n\nassess_history\ndef assess_history(\n    turns\n):\nAssess several turns as one route corpus.\n\n\n\n\nsource\n\nassess_turn\ndef assess_turn(\n    turn\n):\nAssess the tool route recorded in one Ramabana turn.\n\n\nThe first research call determines whether a repository request took the intended route.\n\nbad_route = {\n    'prompt': 'Use fossick to research https://github.com/AnswerDotAI/llmdojo',\n    'activity': [\n        {'tool': 'web_search', 'ok': True, 'args': {'query': 'llmdojo'}},\n        {'tool': 'run_shell', 'ok': True,\n         'args': {'command': 'fossick read-gh-repo https://github.com/AnswerDotAI/llmdojo'}},\n    ],\n}\na = assess_turn(bad_route)\nassert a.score == 80 and a.findings[0].kind == 'route'\na\n\nA repeated malformed edit records both the protocol error and the failure to change route.\n\nbad_edit = {'activity': [\n    {'tool': 'edit_cell', 'ok': False, 'args': {'commands': ''},\n     'detail': 'ERROR: could not parse commands'},\n    {'tool': 'edit_cell', 'ok': False, 'args': {'commands': ''},\n     'detail': 'ERROR: could not parse commands'},\n]}\na = assess_turn(bad_edit)\nassert [f.kind for f in a.findings] == ['tool_protocol', 'repeat_failure', 'tool_protocol']\na",
+    "crumbs": [
+      "core"
+    ]
+  },
+  {
+    "objectID": "core.html#build-the-warm-start",
+    "href": "core.html#build-the-warm-start",
+    "title": "core",
+    "section": "Build the warm start",
+    "text": "Build the warm start\nwarm_start returns ordinary Urai history. Rishi re-exports the same chat contract, so any Rishi backend can continue this history through messages=.\n\n\nsource\n\nprepare_chat\ndef prepare_chat(\n    chat\n):\nPrepend the Drona warm start to an empty Urai-compatible chat.\n\n\n\n\nsource\n\ncompletion_valid\ndef completion_valid(\n    cid, state:NoneType=None\n):\nDoes cid name a completion for the current round?\n\n\n\n\nsource\n\nregister_completion\ndef register_completion(\n    state:NoneType=None\n):\nRecord one clean round and return its completion id.\n\n\n\n\nsource\n\nreceipt_path\ndef receipt_path(\n    state:NoneType=None\n):\nThe completion receipt file.\n\n\n\n\nsource\n\ndrona_version\ndef drona_version():\nThe warm-start revision.\n\n\n\n\nsource\n\nwarm_start\ndef warm_start():\nReturn a reviewed tool-routing demonstration as canonical Urai history.\n\n\n\nhist = warm_start()\nassert [m['role'] for m in hist] == ['user', 'assistant', 'tool', 'assistant']\nassert hist[1]['tool_calls'][0].name == 'run_shell'\nassert hist[2]['tool_call_id'] == hist[1]['tool_calls'][0]['id']\nhist\n\n\nimport tempfile\nstate = Path(tempfile.mkdtemp())/'completions.json'\ncid = register_completion(state)\nassert completion_valid(cid, state)\nold = json.loads(state.read_text())\nold[cid]['version'] = 'old:0'\nstate.write_text(json.dumps(old))\nassert not completion_valid(cid, state)\n\n\n\nsource\n\nmain\ndef main(\n    history:str='/home/runner/.config/ramabana/agent-history.jsonl', # Ramabana history path\n    session:str=None, # optional session id\n):\nAssess persisted Ramabana tool routes.",
+    "crumbs": [
+      "core"
+    ]
+  }
+]
