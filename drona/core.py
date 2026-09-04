@@ -66,16 +66,14 @@ def assess_turn(turn):
         research = [(i, a) for i, a in enumerate(acts) if a.get('tool') in _RESEARCH_TOOLS]
         if research and not _is_fossick_repo(research[0][1]):
             i, a = research[0]
-            findings.append(Finding('route', a.get('tool', ''), i,
-                'Use fossick read-gh-repo as the first repository research call.'))
+            findings.append(Finding('route', a.get('tool', ''), i, 'Use fossick read-gh-repo as the first repository research call.'))
     failed = set()
     for i, a in enumerate(acts):
         if a.get('ok', False): continue
         tool, detail = a.get('tool', ''), str(a.get('detail', ''))
         key = (tool, json.dumps(a.get('args') or {}, sort_keys=True, default=str))
         if key in failed:
-            findings.append(Finding('repeat_failure', tool, i,
-                'Diagnose or change route before repeating a failed call.'))
+            findings.append(Finding('repeat_failure', tool, i, 'Diagnose or change route before repeating a failed call.'))
         failed.add(key)
         if tool == 'edit_cell' and 'could not parse commands' in detail:
             findings.append(Finding('tool_protocol', tool, i,

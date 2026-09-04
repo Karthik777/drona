@@ -37,6 +37,34 @@ history = warm_start()
 
 A completion receipt includes the package version and round revision. [`completion_valid`](https://Karthik777.github.io/drona/core.html#completion_valid) rejects receipts from an older round.
 
+## Curate a round
+
+Ramabana already records completed turns. Capture reads that archive after the conversation ends. It does not monitor a live process.
+
+``` sh
+ramabana --root /path/to/project
+# finish the useful conversation, then quit
+drona-capture training/github-research.ipynb --session latest
+leela training
+```
+
+Open `github-research.ipynb` in Leela. Remove detours and sensitive content. Keep the route that future models should imitate. Save the notebook, then accept it with a reviewer name.
+
+``` sh
+drona-accept training/github-research.ipynb --reviewer Karthik
+```
+
+Acceptance updates the notebook metadata and writes `github-research.json` as derived canonical history. An unaccepted notebook cannot start a session.
+
+`drona-start` prints the Ramabana bootstrap and resume commands by default. `--launch` runs them.
+
+``` sh
+drona-start training/github-research.ipynb --root /path/to/project
+drona-start training/github-research.ipynb --root /path/to/project --launch
+```
+
+Ramabana receives the accepted round as its first bootstrap turn and saves it. Drona then resumes that session. Leela can use [`compiled_history`](https://Karthik777.github.io/drona/rounds.html#compiled_history) directly when it adds prepared-history support.
+
 ## Develop
 
 ``` sh

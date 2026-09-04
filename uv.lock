@@ -562,6 +562,7 @@ wheels = [
 name = "drona"
 source = { editable = "." }
 dependencies = [
+    { name = "aidialog" },
     { name = "fastcore" },
     { name = "uraiyadal" },
 ]
@@ -575,6 +576,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aidialog", specifier = ">=0.0.27" },
     { name = "fastcore", specifier = ">=2.1.16" },
     { name = "uraiyadal", specifier = ">=0.0.1" },
 ]

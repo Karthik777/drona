@@ -15,10 +15,13 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ["fastcore>=2.1.16", "uraiyadal>=0.0.1"]
+dependencies = ["fastcore>=2.1.16", "aidialog>=0.0.27", "uraiyadal>=0.0.1"]
 
 [project.scripts]
 drona = "drona.core:main"
+drona-capture = "drona.rounds:capture_cli"
+drona-accept = "drona.rounds:accept_cli"
+drona-start = "drona.rounds:start_cli"
 
 [project.urls]
 Repository = "https://github.com/Karthik777/drona"
