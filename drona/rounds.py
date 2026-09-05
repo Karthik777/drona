@@ -1,4 +1,4 @@
-"""Capture a session from any host, review it, accept it, and start the next session from it.
+"""Capture a session from a host, review it, accept it, and start the next session from it.
 
 Docs: https://Karthik777.github.io/drona/rounds.html.md"""
 
@@ -33,11 +33,11 @@ BOOTSTRAP_DETAIL = 600
 PENDING = '<output result="pending" reason="incomplete"/>'
 MEDIA = re.compile(r'<media\b[^>]*>.*?</media>|!\[\]\(attachment:[^)]*\)', re.S)
 REVIEW_NOTE = ('# Drona review\n\n'
-               'Edit this dialog in Leela. Delete the detours and anything private, keep the route a '
-               'later model should imitate, then run `drona-accept` on it.')
+               'Edit this dialog in Leela. Delete the incorrect tool calls. Delete all private '
+               'data. Keep the tool calls that a later model must copy. Then run `drona-accept`.')
 
 def drona_version():
-    "The package version and round revision stamped into every accepted round."
+    "The package version and the round revision. Drona writes both to each accepted round."
     from drona import __version__
     return f'{__version__}:{ROUND_REVISION}'
 
@@ -46,7 +46,7 @@ def _clip(text, n):
     return s if len(s) <= n else s[:n] + f'\n…[{len(s)-n} more chars]'
 
 def _plain(text):
-    "Text with the markers for attachments that no longer travel with it removed."
+    "The text without the attachment markers. Drona does not send an attachment with a round."
     return MEDIA.sub('', str(text or '')).strip()
 
 def _read(source):
@@ -65,7 +65,7 @@ def turn_msgs(
     turn, # one Ramabana archive turn
     n=0,  # the turn's place in the round, which keeps fallback call ids unique
 ):
-    "One Ramabana archive turn as typed Aidialog messages."
+    "One turn of a Ramabana log, as Aidialog messages."
     msgs = [Msg('user', [Text(str(turn.get('prompt') or ''))])]
     for i, a in enumerate(turn.get('activity') or ()):
         cid, tool = a.get('action_id') or a.get('id') or f'call_{n}_{i}', a.get('tool', '')
@@ -76,7 +76,7 @@ def turn_msgs(
     return msgs
 
 def _latest_path(host, cwd, codex_home):
-    "The newest session file on `host`."
+    "The newest session file of `host`."
     if host == 'codex': return oai.project_thread(cwd or '.', codex_home or oai.CODEX_HOME)[1]
     paths = sorted(ant.sess_dir(cwd).glob('*.jsonl'), key=lambda p: p.stat().st_mtime)
     if not paths: raise ValueError(f'no Claude session under {ant.sess_dir(cwd)}')
@@ -89,13 +89,13 @@ def host_dlg(
     codex_home=None,  # Codex home
     name=None,        # dialog name
 ):
-    "One Claude or Codex session as a dialog, checked against the host that was asked for."
+    "One Claude or Codex session as a dialog. Drona makes sure that the session belongs to `host`."
     if session == 'latest':
         path = _latest_path(host, cwd, codex_home)
         dlg = path_dlg(LS_HOSTS[host], path, name=name or path.stem, mx=None)
     else: dlg = sess_dlg(session, cwd=cwd, codex_home=codex_home, name=name, mx=None)
     got = (dlg.meta.get('llmsurgery') or {}).get('host')
-    if got != LS_HOSTS[host]: raise ValueError(f'session {session!r} belongs to {got!r}, not {host!r}')
+    if got != LS_HOSTS[host]: raise ValueError(f'session {session!r} belongs to host {got!r}, not to {host!r}')
     return dlg
 
 def capture(
@@ -107,7 +107,7 @@ def capture(
     codex_home=None,          # Codex home
     name=None,                # round name; the output stem when omitted
 ):
-    "Capture one host session as a Drona review notebook."
+    "Make a Drona review notebook from one session of a host."
     if host not in HOSTS: raise ValueError(f'host must be one of {HOSTS}')
     output, name, session = Path(output), name or Path(output).stem, session or 'latest'
     if host == 'ramabana':
@@ -133,20 +133,20 @@ def _part_dict(part):
 def _msg_dict(msg): return {'role': msg.role, 'content': [_part_dict(p) for p in msg.content]}
 
 def _reviewed(dlg, source):
-    "The prompt turns a reviewer left in place, refusing a round they emptied."
+    "The prompt turns that a reviewer kept. Refuse a round that has none."
     prompts = _prompts(dlg)
-    if not prompts: raise ValueError(f'{source} has no reviewed prompt turns left')
+    if not prompts: raise ValueError(f'{source} has no prompt turns; the review removed them all')
     return Dialog(prompts, name=dlg.name, meta=dlg.meta)
 
 def accepted(source):
-    "The reviewed prompts of an accepted round, refusing a round nobody has accepted."
+    "The reviewed prompts of an accepted round. Refuse a round that no reviewer accepted."
     dlg = _read(source)
     if (dlg.meta.get(REVIEW_KEY) or {}).get('status') != 'accepted':
         raise ValueError(f'{source} is not accepted; run drona-accept on it first')
     return _reviewed(dlg, source)
 
 def compiled_history(source):
-    "Canonical Aidialog history from an accepted round."
+    "The Aidialog history of an accepted round."
     return dlg2chat(accepted(source), plain=True)
 
 def accept(
@@ -154,13 +154,13 @@ def accept(
     reviewer,    # the person accepting it
     output=None, # compiled JSON path; `<source>.json` when omitted
 ):
-    "Accept a reviewed round and write its canonical history."
+    "Accept a reviewed round and write its history."
     if not str(reviewer).strip(): raise ValueError('a round needs a named reviewer')
     dlg = _read(source)
     history = dlg2chat(_reviewed(dlg, source), plain=True)
-    if not history or history[0].role != 'user': raise ValueError('a round must open with a user turn')
+    if not history or history[0].role != 'user': raise ValueError('a round must start with a user turn')
     if PENDING in _text(history[-1]):
-        raise ValueError('the last turn of this round was never answered; answer or skip it first')
+        raise ValueError('the last turn of this round has no reply; add a reply or skip that turn')
     meta = {**(dlg.meta.get(REVIEW_KEY) or {}), 'status': 'accepted',
             'reviewer': str(reviewer), 'accepted_version': drona_version()}
     dlg.meta[REVIEW_KEY] = meta
@@ -171,7 +171,7 @@ def accept(
 
 # %% ../nbs/01_rounds.ipynb #1625433c
 def warm_start(source):
-    "An accepted round as Urai history, for `messages=` on any Urai or Rishi chat."
+    "An accepted round as Urai history. Give it to a Urai or Rishi chat as `messages=`."
     out = []
     for m in compiled_history(source):
         if m.role == 'user':
@@ -189,7 +189,7 @@ def prepare_chat(
     chat,   # an empty Urai or Rishi chat
     source, # accepted round notebook
 ):
-    "Prepend an accepted round to an empty Urai-compatible chat."
+    "Put an accepted round at the start of an empty Urai chat."
     if chat.hist: raise ValueError('Drona prepares an empty chat only')
     chat.hist = chat.fmt2hist(warm_start(source))
     if hasattr(chat, '_recreate_conv'): chat._recreate_conv()
@@ -199,8 +199,8 @@ def bootstrap_prompt(
     source,                  # accepted round notebook
     detail=BOOTSTRAP_DETAIL, # characters of each tool result to keep
 ):
-    "An accepted round as one prompt, for a host whose command line takes no prepared history."
-    rows = ['The reviewed Drona round below is the tool route to follow.']
+    "An accepted round as one prompt. Use it for a host that takes no prepared history."
+    rows = ['A reviewer approved the Drona round below. Use the same tools, in the same sequence.']
     for m in compiled_history(source):
         if m.role == 'user':
             rows.append(f'User: {_plain(m.text)}')
@@ -233,7 +233,7 @@ def start_commands(
     model=None, # optional model name
     cfg=None,   # Ramabana config dir, when it is not the default
 ):
-    "The Ramabana bootstrap and resume commands for an accepted round."
+    "The Ramabana bootstrap command and resume command for an accepted round."
     base = ['ramabana', '--root', str(root)]
     if cfg: base += ['--cfg', str(cfg)]
     if model: base += ['--model', model]
@@ -246,7 +246,7 @@ def start_round(
     cfg=None,    # Ramabana config dir, when it is not the default
     launch=False, # run the commands, rather than return them
 ):
-    "Prepare or launch Ramabana with an accepted Drona round."
+    "Make or run the Ramabana commands for an accepted Drona round."
     first, resume = start_commands(source, root, model, cfg)
     if not launch: return {'bootstrap': first, 'resume': resume}
     if rc := subprocess.run(first).returncode: print(f'bootstrap exited {rc}', file=sys.stderr)
@@ -256,7 +256,7 @@ def start_round(
 @call_parse
 def capture_cli(output: str, host: str='ramabana', session: str='latest', cwd: str=None,
                 history: str=str(RAMABANA_HISTORY), codex_home: str=None, name: str=None):
-    "Capture a host session as a Drona review notebook."
+    "Make a Drona review notebook from a session of a host."
     print(report(capture, output, host, session, cwd, history, codex_home, name))
 
 @call_parse
@@ -273,7 +273,7 @@ def export_cli(source: str, host: str, output: str=None, cwd: str=None):
 
 @call_parse
 def start_cli(source: str, root: str='.', model: str=None, cfg: str=None, launch: bool=False):
-    "Prepare or launch Ramabana with an accepted round."
+    "Print or run the Ramabana commands for an accepted round."
     out = report(start_round, source, root, model, cfg, launch)
     if not isinstance(out, dict): sys.exit(out)
     for name, cmd in out.items(): print(f'{name}: {shlex.join(cmd)}')

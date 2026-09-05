@@ -1,4 +1,4 @@
-"""Read Ramabana history and score the tool routes in it.
+"""Read a Ramabana session log and give a score to the tool calls in it.
 
 Docs: https://Karthik777.github.io/drona/core.html.md"""
 
@@ -24,7 +24,7 @@ def _row(line):
     except json.JSONDecodeError: return None
 
 def report(fn, *args, **kw):
-    "Run `fn`, reporting an expected failure as a message rather than a traceback."
+    "Run `fn`. Show an expected failure as a message, not as a traceback."
     try: return fn(*args, **kw)
     except (ValueError, FileNotFoundError) as e:
         print(e, file=sys.stderr)
@@ -34,7 +34,7 @@ def match_session(
     turns,   # turns from `read_history`
     session, # session id, id prefix, or `latest`
 ):
-    "The turns of exactly one session, preferring an exact id over a prefix."
+    "The turns of one session. An exact id has precedence over a prefix."
     ids = [s for t in turns if (s := t.get('session'))]
     if not ids: raise ValueError('no turn carries a session id')
     if session == 'latest': session = ids[-1]
@@ -49,20 +49,20 @@ def read_history(
     session=None,          # session id, id prefix, or `latest`; every session when omitted
     states=DONE,           # turn states to keep; `None` keeps every state
 ):
-    "Ramabana turns, in the order they were appended."
+    "The Ramabana turns, in the sequence that Ramabana wrote them."
     p = Path(path).expanduser()
     if not p.exists(): raise FileNotFoundError(f'no Ramabana history at {p}')
     rows = [t for line in p.read_text().splitlines() if isinstance(t := _row(line), dict)]
-    if not rows: raise ValueError(f'{p} records no turns')
+    if not rows: raise ValueError(f'{p} has no turns')
     turns = rows if states is None else [t for t in rows if t.get('state', 'complete') in states]
     if not turns:
-        raise ValueError(f'no turn in {p.name} is {" or ".join(states)}; --every-state keeps the rest')
+        raise ValueError(f'no turn in {p.name} has the state {" or ".join(states)}; use --every-state to keep the others')
     return match_session(turns, session) if session else turns
 
 # %% ../nbs/00_core.ipynb #47e89b6e
 @dataclass(frozen=True)
 class Finding:
-    "One tool-route problem in a recorded turn."
+    "One fault in the tool calls of a turn."
     kind: str
     tool: str
     index: int
@@ -70,13 +70,13 @@ class Finding:
 
 @dataclass(frozen=True)
 class Assessment:
-    "The route score and findings for one or more turns."
+    "The score and the findings for one turn or more."
     score: int
     calls: int
     findings: tuple[Finding, ...]
 
     def dict(self):
-        "The assessment as plain JSON-ready data."
+        "The assessment as data for JSON."
         return {'score': self.score, 'calls': self.calls, 'findings': [asdict(f) for f in self.findings]}
 
 def _score(findings): return max(0, 100 - 20*len(findings))
@@ -96,7 +96,7 @@ def _reads_repo(action):
     return action.get('tool') == 'run_shell' and 'fossick read-gh-repo' in _args_text(action)
 
 def assess_turn(turn):
-    "Assess the tool route recorded in one Ramabana turn."
+    "Give a score to the tool calls of one Ramabana turn."
     acts, findings = turn.get('activity') or [], []
     prompt = str(turn.get('prompt') or '').lower()
     if 'github' in prompt and 'fossick' in prompt:
@@ -121,7 +121,7 @@ def assess_turn(turn):
     return Assessment(_score(findings), len(acts), tuple(findings))
 
 def assess_history(turns):
-    "Assess several turns as one route corpus."
+    "Give one score to a group of turns."
     each = [assess_turn(t) for t in turns]
     findings = tuple(f for a in each for f in a.findings)
     return Assessment(_score(findings), sum(a.calls for a in each), findings)
@@ -133,6 +133,6 @@ def main(
     session: str=None,                  # session id, id prefix, or `latest`
     every_state: bool=False,            # score abandoned and failed turns too
 ):
-    "Assess persisted Ramabana tool routes."
+    "Give a score to the tool calls in a Ramabana log."
     turns = report(read_history, history, session, states=None if every_state else DONE)
     print(json.dumps(assess_history(turns).dict(), indent=2))
