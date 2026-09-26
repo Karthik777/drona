@@ -24,6 +24,7 @@ drona-accept = "drona.rounds:accept_cli"
 drona-start = "drona.rounds:start_cli"
 drona-import = "drona.sessions:import_cli"
 drona-export = "drona.sessions:export_cli"
+drona-tools = "drona.tools:tools_cli"
 
 [project.urls]
 Repository = "https://github.com/Karthik777/drona"

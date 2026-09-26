@@ -65,15 +65,17 @@ SHELL_TOOLS = (
     (r'git\s+(push|pull|fetch)\b', 'git_remote'), (r'(rg|grep|ag)\b', 'grep'), (r'(find|fd)\b', 'ls'), (r'(ls|tree)\b', 'ls'),
     (r'(sed|perl)\s+-p?i\b', 'replace_text'), (r'(cat\s*>|tee\b)', 'create_file'), (r'sed\s+-n\b|(cat|head|tail|nl)\b', 'view_file'),
     (r'(curl|wget)\b', 'read_url'))
-_PREFIX = re.compile(r'^(env(\s+-u\s+\S+|\s+\w+=\S+)*|\w+=\S+)\s+')
+_PREFIX = re.compile(r'^(env(\s+-u\s+\S+|\s+\w+=\S+)*\s+|(\w+=\S+\s+)+)')
+_GIT_OPTS = re.compile(r'^git\s+((-[Cc]\s+\S+|--\S+)\s+)+')
 
 def _segments(command):
     for s in re.split(r'&&|;|\|\|', command):
-        s = _PREFIX.sub('', s.strip())
+        s = _GIT_OPTS.sub('git ', _PREFIX.sub('', s.strip()))
         if s and not s.startswith('cd '): yield s.split('|')[0].strip()
 
 def bypass_tool(command, offered=None):
     "The dedicated tool `command` stands in for, if any."
+    if not command: return None
     if re.search(r'&\s*$', command.strip()) and not command.strip().endswith('&&'): hit = 'run_shell_bg'
     else: hit = next((t for s in _segments(command) for rx,t in SHELL_TOOLS if re.match(rx, s)), None)
     return hit if hit and (offered is None or hit in offered) else None

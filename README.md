@@ -26,6 +26,13 @@ assessment
 
 Run `drona` to assess the default Ramabana history. Pass `--session` to limit the report to one session.
 
+`drona-tools` measures tool use across the Ramabana and Leela histories: calls and failure rate per tool, shell commands that bypass a dedicated tool, and the same split per model. It is the before/after instrument for tool culling.
+
+``` sh
+drona-tools --since 2026-09-19
+drona-tools --json > baselines/tools.json
+```
+
 ## Prepare a chat
 
 [`warm_start`](https://Karthik777.github.io/drona/core.html#warm_start) returns canonical Urai history. Pass it to any Urai or Rishi chat through `messages=`, or call [`prepare_chat`](https://Karthik777.github.io/drona/core.html#prepare_chat) on an empty chat.

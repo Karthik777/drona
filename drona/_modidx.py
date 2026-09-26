@@ -47,4 +47,9 @@ d = { 'settings': { 'branch': 'main',
             'drona.sessions': { 'drona.sessions.export_cli': ('sessions.html#export_cli', 'drona/sessions.py'),
                                 'drona.sessions.export_session': ('sessions.html#export_session', 'drona/sessions.py'),
                                 'drona.sessions.import_cli': ('sessions.html#import_cli', 'drona/sessions.py'),
-                                'drona.sessions.import_session': ('sessions.html#import_session', 'drona/sessions.py')}}}
+                                'drona.sessions.import_session': ('sessions.html#import_session', 'drona/sessions.py')},
+            'drona.tools': { 'drona.tools._detail_key': ('tools.html#_detail_key', 'drona/tools.py'),
+                             'drona.tools._epoch': ('tools.html#_epoch', 'drona/tools.py'),
+                             'drona.tools.fmt_report': ('tools.html#fmt_report', 'drona/tools.py'),
+                             'drona.tools.tool_report': ('tools.html#tool_report', 'drona/tools.py'),
+                             'drona.tools.tools_cli': ('tools.html#tools_cli', 'drona/tools.py')}}}
