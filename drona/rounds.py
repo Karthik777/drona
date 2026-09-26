@@ -17,7 +17,7 @@ from aidialog.hist import chat2dlg, dlg2chat
 from aidialog.ipynb import read_ipynb, write_ipynb
 from aidialog.msg_parts import Msg, Text, ToolUse, ToolResult
 from fastcore.script import call_parse
-from .core import RAMABANA_HISTORY, assess_history, drona_version, read_history
+from .core import RAMABANA_HISTORY, ROUNDS_DIR, assess_history, drona_version, read_history
 
 # %% ../nbs/01_rounds.ipynb #d4f6b8c0
 REVIEW_KEY = 'drona'
@@ -82,7 +82,7 @@ def capture(
     assessment = assess_history(matches)
     msgs = [m for turn in matches for m in _turn_msgs(turn)]
     dlg = chat2dlg(msgs, name or Path(output).stem, mx=None)
-    report = {'version': drona_version(), 'session': matches[0].get('session'),
+    report = {'version': drona_version(), 'session': matches[0].get('session'), 'model': matches[-1].get('model'),
               'status': 'review', 'score': assessment.score,
               'findings': [asdict(f) for f in assessment.findings]}
     _add_review(dlg, report, 'Edit this dialog in Leela. Remove poor routes and sensitive content. Set `reviewer` when accepting.')
@@ -99,6 +99,7 @@ def accept(
     source,         # reviewed dialog notebook
     reviewer,       # person accepting the round
     output=None,    # compiled JSON path; `<source>.json` when omitted
+    install=False,  # also write to the rounds library (`True` for `ROUNDS_DIR`, or a directory)
 ):
     "Accept a reviewed dialog and write its canonical history."
     if not reviewer.strip(): raise ValueError('reviewer is required')
@@ -107,11 +108,17 @@ def accept(
     history = dlg2chat(Dialog(prompts, name=dlg.name), plain=True)
     if not history or history[0].role != 'user': raise ValueError('Round must start with a user turn')
     meta = dict(dlg.meta.get(REVIEW_KEY) or {})
-    meta.update(status='accepted', reviewer=reviewer, accepted_version=drona_version())
+    tools = sorted({p.name for m in history for p in m.content if isinstance(p, ToolUse)})
+    meta.update(status='accepted', reviewer=reviewer, accepted_version=drona_version(), tools=tools)
     dlg.meta[REVIEW_KEY] = meta
     dlg.save(source)
     output = Path(output) if output else Path(source).with_suffix('.json')
-    output.write_json({'meta': meta, 'history': _history_dicts(history)}, indent=2)
+    data = {'meta': meta, 'history': _history_dicts(history)}
+    output.write_json(data, indent=2)
+    if install:
+        lib = (ROUNDS_DIR if install is True else Path(install))/f'{dlg.name}.json'
+        lib.parent.mkdir(parents=True, exist_ok=True)
+        lib.write_json(data, indent=2)
     return output
 
 def _part_dict(part):
@@ -168,9 +175,9 @@ def capture_cli(output: str, session: str='latest', history: str=str(RAMABANA_HI
     print(capture(output, session, history, name))
 
 @call_parse
-def accept_cli(source: str, reviewer: str='', output: str=None):
+def accept_cli(source: str, reviewer: str='', output: str=None, install: bool=False):
     "Accept a reviewed round and compile its history."
-    print(accept(source, reviewer, output))
+    print(accept(source, reviewer, output, install))
 
 @call_parse
 def start_cli(source: str, root: str='.', model: str=None, launch: bool=False):
