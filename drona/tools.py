@@ -74,7 +74,7 @@ def tools_cli(
     json: bool=False, # print the report as JSON
 ):
     "Report tool usage, failures and shell bypasses across agent histories."
-    paths = L(history.split(',')).filter().map(Path) if history else HISTORIES
+    paths = L(history.split(',')).filter().map(lambda p: Path(p).expanduser()) if history else HISTORIES
     if missing := paths.filter(Path.exists, negate=True): print(f"No history at {', '.join(map(str, missing))}", file=sys.stderr)
     if not (paths := paths.filter(Path.exists)): sys.exit('No history files found')
     try: r = tool_report(paths.map(read_history).concat(), since or None, model or None)

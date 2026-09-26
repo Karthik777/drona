@@ -136,7 +136,7 @@ def call_valid(args, fn):
 
 def _tool_name(f):
     if isinstance(f, str): return f
-    if isinstance(f, functools.partial): return f.func.__name__
+    if isinstance(f, functools.partial): return _tool_name(f.func)
     if callable(f): return getattr(f, '__name__', type(f).__name__)
     raise TypeError('tools must be tool callables, names, or a name→callable dict')
 
