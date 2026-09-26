@@ -10,13 +10,14 @@ __all__ = ['RAMABANA_HISTORY', 'ROUND_REVISION', 'Finding', 'Assessment', 'read_
            'main']
 
 # %% ../nbs/00_core.ipynb #d04693b6
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, asdict
 import json, time, uuid
-
+from fastcore.xtras import Path
 from fastcore.script import call_parse
 from fastcore.xdg import xdg_state_home
+from fastcore.foundation import L
 from urai import ToolCall, mk_tool_res_msg
+from . import __version__
 
 # %% ../nbs/00_core.ipynb #2edea58c
 @dataclass(frozen=True)
@@ -36,18 +37,13 @@ class Assessment:
 
 # %% ../nbs/00_core.ipynb #8e5631ea
 RAMABANA_HISTORY = Path.home()/'.config/ramabana/agent-history.jsonl'
-
 def read_history(
     path=RAMABANA_HISTORY, # Ramabana `agent-history.jsonl` path
     session=None,         # optional session id
 ):
     "Read completed Ramabana turns in append order."
-    records = []
-    with Path(path).expanduser().open() as f:
-        for line in f:
-            record = json.loads(line)
-            if not session or record.get('session') == session: records.append(record)
-    return records
+    r = L(Path(path).expanduser().readlines()).map(json.loads)
+    return r if not session else r.filter(lambda x: x.get('session')==session)
 
 # %% ../nbs/00_core.ipynb #cf182995
 _RESEARCH_TOOLS = {'web_search', 'read_url', 'search_code', 'run_shell'}
@@ -57,31 +53,34 @@ def _is_fossick_repo(action):
     text = ' '.join(str(v) for v in args.values())
     return action.get('tool') == 'run_shell' and 'fossick read-gh-repo' in text
 
+def _first_research_finding(prompt, activities):
+    if 'github' not in prompt.lower() or 'fossick' not in prompt.lower(): return None
+    research = ((i, action) for i, action in enumerate(activities) if action.get('tool') in _RESEARCH_TOOLS)
+    index, action = next(research, (None, None))
+    if action is None or _is_fossick_repo(action): return None
+    return Finding('route', action.get('tool', ''), index, 'Use fossick read-gh-repo as the first repository research call.')
+
+def _failure_key(action): return (action.get('tool', ''), json.dumps(action.get('args') or {}, sort_keys=True, default=str))
+
+def _failure_findings(index, action, failed):
+    if action.get('ok', False): return ()
+    tool, detail, findings = action.get('tool', ''), str(action.get('detail', '')), []
+    key = _failure_key(action)
+    if key in failed: findings.append(Finding('repeat_failure', tool, index, 'Diagnose or change route before repeating a failed call.'))
+    failed.add(key)
+    if tool == 'edit_cell' and 'could not parse commands' in detail or 'JSONDecodeError' in detail or 'JSON decoder' in detail:
+        findings.append(Finding('tool_protocol', tool, index, 'Use the notebook editor command format from its current tool contract.'))
+    if tool == 'run_shell' and ('usage:' in detail or 'unrecognized arguments' in detail):
+        findings.append(Finding('tool_protocol', tool, index, 'Read the project command contract before retrying.'))
+    return tuple(findings)
+
 def assess_turn(turn):
     "Assess the tool route recorded in one Ramabana turn."
-    acts = turn.get('activity') or []
-    findings = []
-    prompt = turn.get('prompt', '').lower()
-    if 'github' in prompt and 'fossick' in prompt:
-        research = [(i, a) for i, a in enumerate(acts) if a.get('tool') in _RESEARCH_TOOLS]
-        if research and not _is_fossick_repo(research[0][1]):
-            i, a = research[0]
-            findings.append(Finding('route', a.get('tool', ''), i, 'Use fossick read-gh-repo as the first repository research call.'))
-    failed = set()
-    for i, a in enumerate(acts):
-        if a.get('ok', False): continue
-        tool, detail = a.get('tool', ''), str(a.get('detail', ''))
-        key = (tool, json.dumps(a.get('args') or {}, sort_keys=True, default=str))
-        if key in failed:
-            findings.append(Finding('repeat_failure', tool, i, 'Diagnose or change route before repeating a failed call.'))
-        failed.add(key)
-        if tool == 'edit_cell' and 'could not parse commands' in detail:
-            findings.append(Finding('tool_protocol', tool, i,
-                'Use the notebook editor command format from its current tool contract.'))
-        if tool == 'run_shell' and ('usage:' in detail or 'unrecognized arguments' in detail):
-            findings.append(Finding('tool_protocol', tool, i,
-                'Read the project command contract before retrying.'))
-    return Assessment(max(0, 100 - 20*len(findings)), len(acts), tuple(findings))
+    activities, findings, failed = turn.get('activity') or [], [], set()
+    route_finding = _first_research_finding(turn.get('prompt', ''), activities)
+    if route_finding: findings.append(route_finding)
+    for ind, a in enumerate(activities): findings.extend(_failure_findings(ind, a, failed))
+    return Assessment(max(0, 100 - 20*len(findings)), len(activities), tuple(findings))
 
 def assess_history(turns):
     "Assess several turns as one route corpus."
@@ -106,7 +105,6 @@ def warm_start():
 
 def drona_version():
     "The warm-start revision."
-    from drona import __version__
     return f'{__version__}:{ROUND_REVISION}'
 
 def receipt_path(state=None):
@@ -115,19 +113,17 @@ def receipt_path(state=None):
 
 def register_completion(state=None):
     "Record one clean round and return its completion id."
-    path = receipt_path(state)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    cid = uuid.uuid4().hex
-    records = json.loads(path.read_text()) if path.exists() else {}
+    path, cid = receipt_path(state), uuid.uuid4().hex
+    records = path.read_json() if path.exists() else {}
     records[cid] = {'version': drona_version(), 'at': time.time()}
-    path.write_text(json.dumps(records, indent=2))
+    path.write_json(records, indent=2)
     return cid
 
 def completion_valid(cid, state=None):
     "Does `cid` name a completion for the current round?"
     path = receipt_path(state)
     if not cid or not path.exists(): return False
-    return (json.loads(path.read_text()).get(cid) or {}).get('version') == drona_version()
+    return (path.read_json().get(cid) or {}).get('version') == drona_version()
 
 def prepare_chat(chat):
     "Prepend the Drona warm start to an empty Urai-compatible chat."
@@ -144,5 +140,4 @@ def main(
 ):
     "Assess persisted Ramabana tool routes."
     a = assess_history(read_history(history, session))
-    print(json.dumps({'score': a.score, 'calls': a.calls,
-                      'findings': [f.__dict__ for f in a.findings]}, indent=2))
+    print(json.dumps({'score': a.score, 'calls': a.calls, 'findings': [asdict(f) for f in a.findings]}, indent=2))
