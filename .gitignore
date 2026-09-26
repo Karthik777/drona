@@ -151,3 +151,5 @@ checklink/cookies.txt
 # Quarto
 .quarto
 .superpowers/
+nbs/_leela_agent_sessions/
+.kosha/

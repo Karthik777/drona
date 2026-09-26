@@ -56,9 +56,9 @@ Removed names keep a one-release deprecation shim only where external callers ex
 
 - Fix `core.py:70` precedence bug (`tool=='edit_cell' and any(s in detail for s in (...))`).
 - Simplify: fastcore `Path` everywhere, `read_json`/`write_json`, `asdict`, one shared helper for "prompts not skipped → Dialog" and the review-note cell used by `rounds.py`/`sessions.py`, no needless lazy imports.
-- `drona tools [--since DATE] [--model M] [--history PATH...]`: per-tool calls, fail rate, top failure details, shell/python bypasses (classifier mapping command → dedicated tool), per-model bypass share. JSON and a compact table. This is the before/after instrument.
+- `drona-tools [--since DATE] [--model M] [--history PATH...]` (CLI name `drona-tools`): per-tool calls, fail rate, top failure details, shell/python bypasses (classifier mapping command → dedicated tool), per-model bypass share. JSON and a compact table. This is the before/after instrument.
 - Assessment findings extended with `bypass` (shell command with a dedicated tool) and `schema` (JSONDecodeError on any tool).
-- Rounds carry `meta['drona']['tools']` (tools demonstrated) and `schema` (hash of the tool schemas they were recorded against). A round library dir (`~/.config/drona/rounds/` + packaged seeds). `warm_start(tools, model=None)` selects accepted rounds whose tools ⊆ offered tools and whose schema hash matches; stale rounds are skipped. Replace the hard-coded Urai demo with a seed round.
+- Rounds carry `meta['drona']['tools']` (tools demonstrated) and `model`. A round library dir (`~/.config/drona/rounds/` + packaged seeds; `drona-accept --install` adds to it). `warm_start(tools, model=None)` selects accepted rounds that are valid while every recorded call binds to the live tool signature (`call_valid`, via `inspect.signature(...).bind`); stale rounds are skipped, same-model rounds sort first. Replace the hard-coded Urai demo with a seed round.
 - Seed rounds: git flow (status → diff → commit → divergence → remote), notebook edit (notebook_cells → view_cell → edit_cell), search (search_code vs grep vs ls), memory (remember with key → memory_search), delegation.
 - Release 0.1.0 to PyPI (confirm before upload).
 
@@ -99,7 +99,7 @@ Removed names keep a one-release deprecation shim only where external callers ex
 ## Testing
 
 - Each phase: nbdev test cells (drona/shalya/ramabana, run `nbdev-prepare`) or pytest (leela, vishalakshi) covering new params, removed names, and failure paths (bad JSON no longer possible for list params; git write returns undo; stale marking; ask policy never off).
-- `drona tools` baseline captured before phase 3 and re-run after phase 5 on fresh sessions; success = JSON decode failures ≈ 0, git shell writes ≈ 0, default tool count ≤ 45 with vault+subagents.
+- `drona-tools` baseline captured before phase 3 and re-run after phase 5 on fresh sessions; success = JSON decode failures ≈ 0, git shell writes ≈ 0, default tool count ≤ 45 with vault+subagents.
 
 ## Release order
 
@@ -108,5 +108,5 @@ drona → vishalakshi → shalya → ramabana → leela. Each release bumps the 
 ## Risks
 
 - Leela backend may bind tools once per session; contextual gating may need a backend rebuild — verify before implementing.
-- Renamed/removed tools break saved approval rules and old drona rounds; schema hash makes rounds stale explicitly, approval rules keyed on removed names are dropped with a log line.
+- Renamed/removed tools break saved approval rules and old drona rounds; `call_valid` makes rounds stale explicitly (a call that no longer binds to the live signature drops the round), approval rules keyed on removed names are dropped with a log line.
 - Git undo/rewind integration touches ramabana's `_record`; keep it behind the existing snapshot API.

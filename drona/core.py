@@ -160,7 +160,7 @@ def round_msgs(rnd):
     for m in rnd['history']:
         parts = m['content']
         if m['role']=='tool':
-            res += [mk_tool_res_msg(tcs.get(p['id']) or _tc(p), p.get('text', '')) for p in parts if p['type']=='tool_result']
+            res += [mk_tool_res_msg(tcs.get(p.get('id')) or _tc(p), p.get('text', '')) for p in parts if p['type']=='tool_result']
             continue
         msg = {'role': m['role'], 'content': '\n'.join(p['text'] for p in parts if p['type']=='text' and p.get('text'))}
         if calls := [_tc(p) for p in parts if p['type']=='tool_use']:
@@ -171,7 +171,9 @@ def round_msgs(rnd):
 def warm_start(tools=None, model=None, limit=2, dirs=None):
     "Canonical Urai history from accepted rounds that fit the offered tools."
     rs = load_rounds(dirs)
-    if tools is not None: rs = [r for r in rs if round_valid(r, as_tools(tools))]
+    if tools is not None:
+        tools = as_tools(tools)
+        rs = [r for r in rs if round_valid(r, tools)]
     rs = sorted(rs, key=lambda r: r['meta'].get('model') != model)[:limit]
     return [m for r in rs for m in round_msgs(r)]
 

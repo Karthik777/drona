@@ -50,12 +50,12 @@ def latest_session(turns):
     "The newest session id in `turns`."
     return turns[-1].get('session') if turns else None
 
-def _turn_msgs(turn):
-    "One Ramabana archive turn as typed Aidialog messages."
+def _turn_msgs(turn, ti=0):
+    "One Ramabana archive turn as typed Aidialog messages; `ti` keeps fallback call ids unique across turns."
     user = Msg('user', [Text(turn.get('prompt', ''))])
     replies = []
     for i, action in enumerate(turn.get('activity') or []):
-        call_id = action.get('action_id') or action.get('id') or f'call_{i}'
+        call_id = action.get('action_id') or action.get('id') or f'call_{ti}_{i}'
         tool = action.get('tool', '')
         args = action.get('args') or {}
         replies += [
@@ -80,7 +80,7 @@ def capture(
     if not matches: raise ValueError(f'No Ramabana session matches {session!r}')
     if len(ids) > 1: raise ValueError(f'Ramabana session prefix {session!r} is ambiguous')
     assessment = assess_history(matches)
-    msgs = [m for turn in matches for m in _turn_msgs(turn)]
+    msgs = [m for ti, turn in enumerate(matches) for m in _turn_msgs(turn, ti)]
     dlg = chat2dlg(msgs, name or Path(output).stem, mx=None)
     report = {'version': drona_version(), 'session': matches[0].get('session'), 'model': matches[-1].get('model'),
               'status': 'review', 'score': assessment.score,
