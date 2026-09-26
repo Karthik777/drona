@@ -41,7 +41,7 @@ assessment = assess_turn(turn)
 assessment
 ```
 
-Findings are `route` (generic search before FOSSICK), `schema` (arguments that failed to decode), `bypass` (a shell command a dedicated tool covers), `tool_protocol` (command-line usage error) and `repeat_failure`. Run `drona` to assess the default Ramabana history. Pass `--session` to limit the report to one session.
+Findings are `route` (generic search before FOSSICK), `schema` (arguments that failed to decode), `bypass` (a shell command a dedicated tool covers), `tool_protocol` (command-line usage error) and `repeat_failure`. Every finding lowers the score by 20 points, including each distinct `bypass` in a turn, so shelling out for `git diff` or `cat` costs points. Run `drona` to assess the default Ramabana history. Pass `--session` to limit the report to one session.
 
 ## Curate a round
 
@@ -73,7 +73,7 @@ Ramabana receives the accepted round as its first bootstrap turn and saves it. D
 
 ## Warm start a chat
 
-[`warm_start`](https://Karthik777.github.io/drona/core.html#warm_start) returns canonical Urai history from the accepted rounds in the library and the seeds packaged with drona. Pass the tools you offer (a list of callables or a name → callable dict) and only rounds whose recorded calls bind to those signatures ([`call_valid`](https://Karthik777.github.io/drona/core.html#call_valid)) are replayed; a round for a renamed or re-parameterised tool is skipped rather than taught. Pass it to any Urai or Rishi chat through `messages=`, or call [`prepare_chat`](https://Karthik777.github.io/drona/core.html#prepare_chat) on an empty chat.
+[`warm_start`](https://Karthik777.github.io/drona/core.html#warm_start) returns canonical Urai history from the accepted rounds in the library and the seeds packaged with drona. Pass the tools you offer (a list of callables or tool names, or a name → callable dict) and only rounds whose recorded calls bind to those signatures ([`call_valid`](https://Karthik777.github.io/drona/core.html#call_valid)) are replayed; a round for a renamed or re-parameterised tool is skipped rather than taught. Pass it to any Urai or Rishi chat through `messages=`, or call [`prepare_chat`](https://Karthik777.github.io/drona/core.html#prepare_chat) on an empty chat.
 
 ``` python
 def run_shell(command, cwd='.', timeout=60): ...

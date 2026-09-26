@@ -12,7 +12,7 @@ __all__ = ['RAMABANA_HISTORY', 'SHELL_TOOLS', 'ROUND_REVISION', 'ROUNDS_DIR', 'S
 
 # %% ../nbs/00_core.ipynb #d04693b6
 from dataclasses import dataclass, asdict
-import json, re, time, uuid, inspect
+import json, re, sys, time, uuid, inspect, functools
 from fastcore.basics import ifnone
 from fastcore.xtras import Path
 from fastcore.script import call_parse
@@ -20,7 +20,6 @@ from fastcore.xdg import xdg_state_home, xdg_config_home
 from fastcore.foundation import L
 from urai import ToolCall, mk_tool_res_msg
 import drona
-from . import __version__
 
 # %% ../nbs/00_core.ipynb #2edea58c
 @dataclass(frozen=True)
@@ -97,7 +96,7 @@ def _first_research_finding(prompt, activities):
 def _failure_key(action): return (action.get('tool', ''), json.dumps(tool_args(action), sort_keys=True, default=str))
 
 def _failure_findings(index, action, failed):
-    if action.get('ok', False): return ()
+    if action.get('ok') is not False: return ()
     tool, detail, findings = action.get('tool', ''), str(action.get('detail', '')), []
     key = _failure_key(action)
     if key in failed: findings.append(Finding('repeat_failure', tool, index, 'Diagnose or change route before repeating a failed call.'))
@@ -110,12 +109,12 @@ def _failure_findings(index, action, failed):
 
 def assess_turn(turn):
     "Assess the tool route recorded in one Ramabana turn."
-    activities, findings, failed = turn.get('activity') or [], [], set()
+    activities, findings, failed, bypassed = turn.get('activity') or [], [], set(), set()
     route_finding = _first_research_finding(turn.get('prompt', ''), activities)
     if route_finding: findings.append(route_finding)
     for ind, a in enumerate(activities):
-        if a.get('tool') == 'run_shell' and (t := bypass_tool(str(tool_args(a).get('command', '')))):
-            findings.append(Finding('bypass', 'run_shell', ind, f'Use {t} instead of run_shell for this.'))
+        if a.get('tool') == 'run_shell' and (t := bypass_tool(str(tool_args(a).get('command', '')))) and t not in bypassed:
+            bypassed.add(t); findings.append(Finding('bypass', 'run_shell', ind, f'Use {t} instead of run_shell for this.'))
         findings.extend(_failure_findings(ind, a, failed))
     return Assessment(max(0, 100 - 20*len(findings)), len(activities), tuple(findings))
 
@@ -135,24 +134,30 @@ def call_valid(args, fn):
     try: inspect.signature(fn).bind(**args); return True
     except (TypeError, ValueError): return False
 
+def _tool_name(f):
+    if isinstance(f, str): return f
+    if isinstance(f, functools.partial): return f.func.__name__
+    if callable(f): return getattr(f, '__name__', type(f).__name__)
+    raise TypeError('tools must be tool callables, names, or a name→callable dict')
+
 def as_tools(tools):
-    "Tools keyed by name, from a dict or an iterable of callables."
-    return dict(tools) if isinstance(tools, dict) else {f.__name__: f for f in tools}
+    "Tools keyed by name, from a dict or an iterable of callables, partials, or names (a name maps to `None`)."
+    return dict(tools) if isinstance(tools, dict) else {_tool_name(f): None if isinstance(f, str) else f for f in tools}
 
 def round_calls(rnd):
     "The `(tool, arguments)` pairs an accepted round makes."
     return [(p['name'], p.get('arguments') or {}) for m in rnd['history'] for p in m['content'] if p['type']=='tool_use']
 
 def round_valid(rnd, tools):
-    "Do all of `rnd`'s calls bind to `tools`?"
-    return all(n in tools and call_valid(a, tools[n]) for n,a in round_calls(rnd))
+    "Do all of `rnd`'s calls bind to `tools`? A `None` tool checks the name only."
+    return all(n in tools and (tools[n] is None or call_valid(a, tools[n])) for n,a in round_calls(rnd))
 
 def load_rounds(dirs=None):
     "Accepted rounds from the library and packaged seeds, skipping unreadable files."
     rs = [_loads(p.read_text()) for d in ifnone(dirs, [ROUNDS_DIR, SEEDS_DIR]) for p in sorted(Path(d).glob('*.json'))]
     return [r for r in rs if isinstance(r, dict) and r.get('meta', {}).get('status')=='accepted']
 
-def _tc(p): return ToolCall(p['name'], p.get('arguments') or {}, id=p.get('id'))
+def _tc(p): return ToolCall(p['name'], p.get('arguments') or {}, **({'id': p['id']} if p.get('id') else {}))
 
 def round_msgs(rnd):
     "Canonical Urai messages from an accepted round."
@@ -179,7 +184,7 @@ def warm_start(tools=None, model=None, limit=2, dirs=None):
 
 def drona_version():
     "The warm-start revision."
-    return f'{__version__}:{ROUND_REVISION}'
+    return f'{drona.__version__}:{ROUND_REVISION}'
 
 def receipt_path(state=None):
     "The completion receipt file."
@@ -213,5 +218,6 @@ def main(
     session: str=None,                  # optional session id
 ):
     "Assess persisted Ramabana tool routes."
+    if not Path(history).expanduser().exists(): sys.exit(f'No history at {history}')
     a = assess_history(read_history(history, session))
     print(json.dumps({'score': a.score, 'calls': a.calls, 'findings': [asdict(f) for f in a.findings]}, indent=2))

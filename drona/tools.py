@@ -11,7 +11,7 @@ __all__ = ['HISTORIES', 'tool_report', 'fmt_report', 'tools_cli']
 from collections import Counter, defaultdict
 from datetime import datetime
 from json import dumps
-import re
+import re, sys
 from fastcore.xtras import Path
 from fastcore.foundation import L
 from fastcore.script import call_parse
@@ -25,7 +25,9 @@ def _epoch(t):
     "`t` as seconds since the epoch, from a number, numeric string, or ISO date."
     if t in (None, ''): return None
     try: return float(t)
-    except ValueError: return datetime.fromisoformat(t).timestamp()
+    except ValueError:
+        try: return datetime.fromisoformat(t).timestamp()
+        except ValueError: raise ValueError(f'--since must be an epoch or ISO date, got {t!r}') from None
 
 def _detail_key(detail):
     "The first line of `detail` with digits normalised, so repeated failures group together."
@@ -72,7 +74,10 @@ def tools_cli(
     json: bool=False, # print the report as JSON
 ):
     "Report tool usage, failures and shell bypasses across agent histories."
-    paths = L(history.split(',')).filter() if history else HISTORIES
-    r = tool_report(paths.map(read_history).concat(), since or None, model or None)
+    paths = L(history.split(',')).filter().map(Path) if history else HISTORIES
+    if missing := paths.filter(Path.exists, negate=True): print(f"No history at {', '.join(map(str, missing))}", file=sys.stderr)
+    if not (paths := paths.filter(Path.exists)): sys.exit('No history files found')
+    try: r = tool_report(paths.map(read_history).concat(), since or None, model or None)
+    except ValueError as e: sys.exit(str(e))
     print(dumps(r, indent=2) if json else fmt_report(r))
 

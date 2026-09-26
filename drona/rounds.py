@@ -96,14 +96,16 @@ def compiled_history(source):
     return dlg2chat(dlg, plain=True)
 
 def accept(
-    source,         # reviewed dialog notebook
+    source,         # reviewed dialog notebook, or a `Dialog` read from one
     reviewer,       # person accepting the round
     output=None,    # compiled JSON path; `<source>.json` when omitted
     install=False,  # also write to the rounds library (`True` for `ROUNDS_DIR`, or a directory)
 ):
     "Accept a reviewed dialog and write its canonical history."
     if not reviewer.strip(): raise ValueError('reviewer is required')
-    dlg = read_dialog(source)
+    if isinstance(source, Dialog): dlg, source = source, source.path_
+    else: dlg = read_dialog(source)
+    source = Path(source)
     if not (prompts := _prompts(dlg)): raise ValueError('Round contains no prompt turns')
     history = dlg2chat(Dialog(prompts, name=dlg.name), plain=True)
     if not history or history[0].role != 'user': raise ValueError('Round must start with a user turn')
@@ -112,11 +114,11 @@ def accept(
     meta.update(status='accepted', reviewer=reviewer, accepted_version=drona_version(), tools=tools)
     dlg.meta[REVIEW_KEY] = meta
     dlg.save(source)
-    output = Path(output) if output else Path(source).with_suffix('.json')
+    output = Path(output) if output else source.with_suffix('.json')
     data = {'meta': meta, 'history': _history_dicts(history)}
     output.write_json(data, indent=2)
     if install:
-        lib = (ROUNDS_DIR if install is True else Path(install))/f'{dlg.name}.json'
+        lib = (ROUNDS_DIR if install is True else Path(install))/f'{dlg.name or source.stem}.json'
         lib.parent.mkdir(parents=True, exist_ok=True)
         lib.write_json(data, indent=2)
     return output
