@@ -65,7 +65,7 @@
    "content": [
     {
      "type": "text",
-     "text": "The same fact, refined. Reuse the key so the note is replaced rather than duplicated."
+     "text": "The same fact, refined. Reuse the key and the title so the note is replaced in place rather than duplicated or retitled."
     },
     {
      "type": "tool_use",
@@ -73,6 +73,7 @@
      "name": "remember",
      "arguments": {
       "text": "This repo uses uv; never pip install. Add deps with `uv add`, not by editing pyproject.",
+      "title": "Tooling",
       "key": "tooling-uv"
      }
     }

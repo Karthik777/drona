@@ -3,20 +3,29 @@
     "name": "fossick-github",
     "status": "accepted",
     "reviewer": "Karthik",
-    "tools": ["run_shell"],
-    "model": null
+    "tools": [
+      "run_shell"
+    ],
+    "model": null,
+    "rank": 50
   },
   "history": [
     {
       "role": "user",
       "content": [
-        {"type": "text", "text": "Use FOSSICK to research the AnswerDotAI llmdojo GitHub repository."}
+        {
+          "type": "text",
+          "text": "Use FOSSICK to research the AnswerDotAI llmdojo GitHub repository."
+        }
       ]
     },
     {
       "role": "assistant",
       "content": [
-        {"type": "text", "text": "The request names a GitHub repository and FOSSICK, so use its repository reader first."},
+        {
+          "type": "text",
+          "text": "The request names a GitHub repository and FOSSICK, so use its repository reader first."
+        },
         {
           "type": "tool_use",
           "id": "call_fossick",
@@ -32,13 +41,21 @@
     {
       "role": "tool",
       "content": [
-        {"type": "tool_result", "id": "call_fossick", "name": "run_shell", "text": "# llmdojo\nLLM coding agents imitate what their context shows."}
+        {
+          "type": "tool_result",
+          "id": "call_fossick",
+          "name": "run_shell",
+          "text": "# llmdojo\nLLM coding agents imitate what their context shows."
+        }
       ]
     },
     {
       "role": "assistant",
       "content": [
-        {"type": "text", "text": "FOSSICK read the repository directly. I will use its source files as the evidence."}
+        {
+          "type": "text",
+          "text": "FOSSICK read the repository directly. I will use its source files as the evidence."
+        }
       ]
     }
   ]

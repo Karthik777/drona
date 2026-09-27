@@ -45,7 +45,7 @@
      "type": "tool_result",
      "id": "call_status",
      "name": "git_status",
-     "text": "{\n  \"result\": \"\",\n  \"root\": \"/work/pkg-repo\",\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"branches\": [\n    \"main\"\n  ],\n  \"ahead\": 0,\n  \"behind\": 0,\n  \"clean\": false,\n  \"changes\": [\n    {\n      \"path\": \"pkg/sizes.py\",\n      \"old_path\": null,\n      \"index\": \" \",\n      \"worktree\": \"M\",\n      \"staged\": false\n    }\n  ]\n}"
+     "text": "{\n \"result\": \"\",\n \"summary\": \"\",\n \"undo\": \"\",\n \"undoes\": \"\",\n \"head\": \"\",\n \"moved\": false,\n \"root\": \"/work/pkg-repo\",\n \"branch\": \"main\",\n \"upstream\": \"origin/main\",\n \"ahead\": 0,\n \"behind\": 0,\n \"clean\": false,\n \"branches\": [\n  {\n   \"name\": \"main\",\n   \"upstream\": \"origin/main\",\n   \"oid\": \"3f2a9b1\",\n   \"subject\": \"Add sizes\",\n   \"ahead\": 0,\n   \"behind\": 0\n  }\n ],\n \"changes\": [\n  {\n   \"path\": \"pkg/sizes.py\",\n   \"old_path\": null,\n   \"index\": \" \",\n   \"worktree\": \"M\",\n   \"staged\": false,\n   \"unstaged\": true,\n   \"untracked\": false,\n   \"conflicted\": false\n  }\n ]\n}"
     }
    ]
   },
@@ -102,7 +102,7 @@
      "type": "tool_result",
      "id": "call_commit",
      "name": "git_commit",
-     "text": "{\n  \"result\": \"committed 9c1e7d2 Halve the threshold\",\n  \"summary\": \"1 file changed, 1 insertion(+), 1 deletion(-)\",\n  \"undo\": \"sp_ab12\",\n  \"undoes\": \"commit 9c1e7d2 (Halve the threshold) on 3f2a9b1\",\n  \"head\": \"9c1e7d2\",\n  \"moved\": true,\n  \"root\": \"/work/pkg-repo\",\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"branches\": [\n    \"main\"\n  ],\n  \"ahead\": 1,\n  \"behind\": 0,\n  \"clean\": true,\n  \"changes\": []\n}"
+     "text": "{\n \"result\": \"commit moved this branch to 9c1e7d2\",\n \"summary\": \"commit moved this branch to 9c1e7d2\",\n \"undo\": \"sp_ab12\",\n \"undoes\": \"commit on main\",\n \"head\": \"9c1e7d2\",\n \"moved\": true,\n \"root\": \"/work/pkg-repo\",\n \"branch\": \"main\",\n \"upstream\": \"origin/main\",\n \"ahead\": 1,\n \"behind\": 0,\n \"clean\": true,\n \"branches\": [\n  {\n   \"name\": \"main\",\n   \"upstream\": \"origin/main\",\n   \"oid\": \"9c1e7d2\",\n   \"subject\": \"Halve the threshold\",\n   \"ahead\": 1,\n   \"behind\": 0\n  }\n ],\n \"changes\": []\n}"
     }
    ]
   },
@@ -128,7 +128,7 @@
      "type": "tool_result",
      "id": "call_div",
      "name": "git_divergence",
-     "text": "{\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"relation\": \"ahead\",\n  \"ahead\": 1,\n  \"behind\": 0,\n  \"merge_base\": \"3f2a9b1\",\n  \"recommended\": \"\",\n  \"clean\": true\n}"
+     "text": "{\n \"branch\": \"main\",\n \"upstream\": \"origin/main\",\n \"relation\": \"ahead\",\n \"ahead\": 1,\n \"behind\": 0,\n \"merge_base\": \"3f2a9b1\",\n \"recommended\": \"\",\n \"ours\": [\n  \"9c1e7d2 Halve the threshold\"\n ],\n \"theirs\": [],\n \"clean\": true,\n \"dirty\": [],\n \"untracked\": 0\n}"
     }
    ]
   },
@@ -156,7 +156,7 @@
      "type": "tool_result",
      "id": "call_push",
      "name": "git_remote",
-     "text": "{\n  \"result\": \"pushed main\",\n  \"summary\": \"pushed main\",\n  \"undo\": \"\",\n  \"undoes\": \"\",\n  \"head\": \"9c1e7d2\",\n  \"moved\": false,\n  \"root\": \"/work/pkg-repo\",\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"branches\": [\n    \"main\"\n  ],\n  \"ahead\": 0,\n  \"behind\": 0,\n  \"clean\": true,\n  \"changes\": []\n}"
+     "text": "{\n \"result\": \"pushed main\",\n \"summary\": \"pushed main\",\n \"undo\": \"\",\n \"undoes\": \"\",\n \"head\": \"\",\n \"moved\": false,\n \"root\": \"/work/pkg-repo\",\n \"branch\": \"main\",\n \"upstream\": \"origin/main\",\n \"ahead\": 0,\n \"behind\": 0,\n \"clean\": true,\n \"branches\": [\n  {\n   \"name\": \"main\",\n   \"upstream\": \"origin/main\",\n   \"oid\": \"9c1e7d2\",\n   \"subject\": \"Halve the threshold\",\n   \"ahead\": 0,\n   \"behind\": 0\n  }\n ],\n \"changes\": []\n}"
     }
    ]
   },
@@ -165,7 +165,7 @@
    "content": [
     {
      "type": "text",
-     "text": "Committed `9c1e7d2` \"Halve the threshold\" (pkg/sizes.py) and pushed it to origin/main. The commit's `undo` token is `sp_ab12`, so `/rewind` can take it back if the change turns out wrong; the push itself has no undo."
+     "text": "Committed `9c1e7d2` \"Halve the threshold\" (pkg/sizes.py) and pushed it to origin/main, which now tracks it (ahead 0). The commit's `undo` token is `sp_ab12`, so `/rewind` can take it back if the change turns out wrong; the push itself has no undo."
     }
    ]
   }
