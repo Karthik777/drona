@@ -16,7 +16,7 @@ from fastcore.xtras import Path
 from fastcore.foundation import L
 from fastcore.script import call_parse
 
-from .core import read_history, tool_args, bypass_tool
+from .core import read_history, tool_args, bypass_tool, denial_reason
 
 # %% ../nbs/03_tools.ipynb #55021db5
 HISTORIES = L(Path.home()/f'.config/{app}/{kind}-history.jsonl' for app in ('ramabana', 'leela') for kind in ('agent', 'inline')).filter(Path.exists)
@@ -38,8 +38,8 @@ def tool_report(
     since=None, # epoch or ISO date lower bound on `at`
     model=None, # restrict to one model name
 ):
-    "Per-tool call and failure counts, shell bypasses, and the same split per model."
-    since, calls, fails, details, bypass = _epoch(since), Counter(), Counter(), defaultdict(Counter), Counter()
+    "Per-tool call, failure and denial counts, shell bypasses, and the same split per model."
+    since, calls, fails, details, bypass, denials, reasons = _epoch(since), Counter(), Counter(), defaultdict(Counter), Counter(), Counter(), Counter()
     models = defaultdict(lambda: dict(calls=0, shell=0, bypass=0))
     for t in turns:
         if (since and (t.get('at') or 0) < since) or (model and t.get('model') != model): continue
@@ -47,20 +47,25 @@ def tool_report(
         for a in t.get('activity') or []:
             tool = a.get('tool') or '?'
             calls[tool] += 1; m['calls'] += 1
-            if a.get('ok') is False: fails[tool] += 1; details[tool][_detail_key(a.get('detail'))] += 1
+            if (reason := denial_reason(a)) is not None: denials[tool] += 1; reasons[_detail_key(reason)] += 1
+            elif a.get('ok') is False: fails[tool] += 1; details[tool][_detail_key(a.get('detail'))] += 1
             if tool == 'run_shell':
                 m['shell'] += 1
                 if b := bypass_tool(tool_args(a).get('command')): bypass[b] += 1; m['bypass'] += 1
     tools = {k: dict(calls=v, fails=fails[k], fail_rate=round(fails[k]/v, 3), failures=[[d,n] for d,n in details[k].most_common(3)])
              for k,v in calls.most_common()}
-    return dict(calls=sum(calls.values()), tools=tools, bypass=dict(bypass.most_common()), models=dict(models))
+    return dict(calls=sum(calls.values()), tools=tools, bypass=dict(bypass.most_common()), denials=dict(denials.most_common()),
+                denial_reasons=[[d,n] for d,n in reasons.most_common(3)], models=dict(models))
+
+def _counts(d): return ', '.join(f'{k}={v}' for k,v in d.items())
 
 def fmt_report(r):
-    "`r` as a text table followed by bypass and per-model summary lines."
+    "`r` as a text table followed by bypass, denial and per-model summary lines."
     w = max(map(len, r['tools']), default=4)
     rows = [f"{'tool':<{w}}  calls  fail%  top failure"]
     rows += [f"{t:<{w}}  {v['calls']:>5}  {100*v['fail_rate']:>4.0f}%  {v['failures'][0][0] if v['failures'] else ''}" for t,v in r['tools'].items()]
-    rows.append(f"\n{r['calls']} calls; bypass: " + (', '.join(f'{k}={v}' for k,v in r['bypass'].items()) or 'none'))
+    rows.append(f"\n{r['calls']} calls; bypass: " + (_counts(r['bypass']) or 'none'))
+    rows.append(f"denials: {_counts(r['denials'])}; {_counts(dict(r['denial_reasons']))}" if r['denials'] else 'denials: none')
     rows += [f"{m}: {v['calls']} calls, {v['shell']} shell, {v['bypass']} bypass" for m,v in r['models'].items()]
     return '\n'.join(rows)
 

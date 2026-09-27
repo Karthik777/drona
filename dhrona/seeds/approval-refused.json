@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "name": "approval-refused",
+    "status": "accepted",
+    "reviewer": "Karthik",
+    "tools": [
+      "view_file",
+      "replace_text"
+    ],
+    "model": null
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Change the greeting in hello.py from 'Hello' to 'Hi'."
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "A small edit: view the file first so the replacement matches the current text."
+        },
+        {
+          "type": "tool_use",
+          "id": "call_view",
+          "name": "view_file",
+          "arguments": {
+            "path": "hello.py"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": [
+        {
+          "type": "tool_result",
+          "id": "call_view",
+          "name": "view_file",
+          "text": "1|3f2a|def greet():\n2|9c1e|    return 'Hello'"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "One exact replacement on line 2."
+        },
+        {
+          "type": "tool_use",
+          "id": "call_edit",
+          "name": "replace_text",
+          "arguments": {
+            "path": "hello.py",
+            "spec": "[{\"oldText\": \"return 'Hello'\", \"newText\": \"return 'Hi'\"}]"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "content": [
+        {
+          "type": "tool_result",
+          "id": "call_edit",
+          "name": "replace_text",
+          "text": "Denied by human operator. Reason given: no answer after 300s"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I need your approval to edit `hello.py` — the approval prompt timed out, so nothing changed. Shall I apply the edit? Approve it here (or run `/approve edits`) and I'll go ahead."
+        }
+      ]
+    }
+  ]
+}

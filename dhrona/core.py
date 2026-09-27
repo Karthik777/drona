@@ -6,9 +6,9 @@ Docs: https://Karthik777.github.io/drona/core.html.md"""
 
 # %% auto #0
 __all__ = ['RAMABANA_HISTORY', 'SHELL_TOOLS', 'ROUND_REVISION', 'ROUNDS_DIR', 'SEEDS_DIR', 'Finding', 'Assessment',
-           'read_history', 'tool_args', 'bypass_tool', 'assess_turn', 'assess_history', 'call_valid', 'as_tools',
-           'round_calls', 'round_valid', 'load_rounds', 'round_msgs', 'warm_start', 'dhrona_version', 'receipt_path',
-           'register_completion', 'completion_valid', 'prepare_chat', 'main']
+           'read_history', 'tool_args', 'bypass_tool', 'denial_reason', 'assess_turn', 'assess_history', 'call_valid',
+           'as_tools', 'round_calls', 'round_valid', 'load_rounds', 'round_msgs', 'warm_start', 'dhrona_version',
+           'receipt_path', 'register_completion', 'completion_valid', 'prepare_chat', 'main']
 
 # %% ../nbs/00_core.ipynb #d04693b6
 from dataclasses import dataclass, asdict
@@ -95,8 +95,17 @@ def _first_research_finding(prompt, activities):
 
 def _failure_key(action): return (action.get('tool', ''), json.dumps(tool_args(action), sort_keys=True, default=str))
 
+_DENIED = 'Denied by human operator'
+
+def denial_reason(action):
+    "The operator's reason if `action` is a refused ask, else `None`."
+    if action.get('ok') is not False: return None
+    detail = str(action.get('detail') or '')
+    if action.get('kind') != 'ask' and not detail.startswith(_DENIED): return None
+    return detail.partition('Reason given:')[2].strip() or 'no reason given'
+
 def _failure_findings(index, action, failed):
-    if action.get('ok') is not False: return ()
+    if action.get('ok') is not False or denial_reason(action) is not None: return ()
     tool, detail, findings = action.get('tool', ''), str(action.get('detail', '')), []
     key = _failure_key(action)
     if key in failed: findings.append(Finding('repeat_failure', tool, index, 'Diagnose or change route before repeating a failed call.'))
@@ -107,20 +116,33 @@ def _failure_findings(index, action, failed):
         findings.append(Finding('tool_protocol', tool, index, 'Read the project command contract before retrying.'))
     return tuple(findings)
 
-def assess_turn(turn):
-    "Assess the tool route recorded in one Ramabana turn."
-    activities, findings, failed, bypassed = turn.get('activity') or [], [], set(), set()
+def _denial_finding(index, action, denied):
+    key, retry = _failure_key(action), None
+    if key in denied: retry = Finding('denial_retry', action.get('tool', ''), index, 'Ask the user about the refused call instead of retrying it.')
+    if denial_reason(action) is not None: denied.add(key)
+    return retry
+
+def assess_turn(turn, denied=()):
+    "Assess the tool route recorded in one Ramabana turn; `denied` holds calls refused in the previous turn."
+    activities, findings, failed, bypassed, denied = turn.get('activity') or [], [], set(), set(), set(denied)
     route_finding = _first_research_finding(turn.get('prompt', ''), activities)
     if route_finding: findings.append(route_finding)
     for ind, a in enumerate(activities):
         if a.get('tool') == 'run_shell' and (t := bypass_tool(str(tool_args(a).get('command', '')))) and t not in bypassed:
             bypassed.add(t); findings.append(Finding('bypass', 'run_shell', ind, f'Use {t} instead of run_shell for this.'))
+        if retry := _denial_finding(ind, a, denied): findings.append(retry)
         findings.extend(_failure_findings(ind, a, failed))
     return Assessment(max(0, 100 - 20*len(findings)), len(activities), tuple(findings))
 
+def _carried(prev, turn):
+    "Calls refused in `prev` that `turn` may still be retrying: same session, and no question asked in between."
+    if prev is None or prev.get('session') != turn.get('session') or '?' in str(prev.get('reply') or ''): return set()
+    return {_failure_key(a) for a in prev.get('activity') or [] if denial_reason(a) is not None}
+
 def assess_history(turns):
-    "Assess several turns as one route corpus."
-    assessments = [assess_turn(t) for t in turns]
+    "Assess several turns as one route corpus, carrying refusals into the next turn of the same session."
+    turns = list(turns)
+    assessments = [assess_turn(t, _carried(p, t)) for p,t in zip([None]+turns, turns)]
     findings = tuple(f for a in assessments for f in a.findings)
     return Assessment(max(0, 100 - 20*len(findings)), sum(a.calls for a in assessments), findings)
 

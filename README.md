@@ -23,7 +23,7 @@ pip install dhrona
 
 ## Measure tool use
 
-`dhrona-tools` measures tool use across the Ramabana and Leela histories: calls and failure rate per tool, shell commands that bypass a dedicated tool, and the same split per model. It is the before/after instrument for tool culling.
+`dhrona-tools` measures tool use across the Ramabana and Leela histories: calls, failure rate and denials per tool, shell commands that bypass a dedicated tool, and the same split per model. It is the before/after instrument for tool culling.
 
 ``` sh
 dhrona-tools --since 2026-09-19
@@ -41,7 +41,9 @@ assessment = assess_turn(turn)
 assessment
 ```
 
-Findings are `route` (generic search before FOSSICK), `schema` (arguments that failed to decode), `bypass` (a shell command a dedicated tool covers), `tool_protocol` (command-line usage error) and `repeat_failure`. Every finding lowers the score by 20 points, including each distinct `bypass` in a turn, so shelling out for `git diff` or `cat` costs points. Run `dhrona` to assess the default Ramabana history. Pass `--session` to limit the report to one session.
+Findings are `route` (generic search before FOSSICK), `schema` (arguments that failed to decode), `bypass` (a shell command a dedicated tool covers), `tool_protocol` (command-line usage error), `repeat_failure` and `denial_retry` (a refused call repeated instead of a question to the user). Every finding lowers the score by 20 points, including each distinct `bypass` in a turn, so shelling out for `git diff` or `cat` costs points. Run `dhrona` to assess the default Ramabana history. Pass `--session` to limit the report to one session.
+
+A refused approval is not a tool failure. Ramabana records it as a failed `ask` row whose detail starts `Denied by human operator` and carries the operator’s reason (or the timeout that stood in for one). Dhrona never counts these as `schema` or `repeat_failure`; `dhrona-tools` reports them separately as `denials` per tool with the top `denial_reasons`, and [`assess_history`](https://Karthik777.github.io/drona/core.html#assess_history) flags `denial_retry` when the same call is made again in that turn or the next turn of the session without a question to the user in between. The packaged `approval-refused` seed teaches the alternative: name the refused edit, say nothing changed, and ask once.
 
 ## Curate a round
 
