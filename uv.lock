@@ -801,9 +801,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aidialog", specifier = ">=0.0.27" },
+    { name = "aidialog", specifier = ">=0.0.22" },
     { name = "fastcore", specifier = ">=2.1.16" },
-    { name = "llmsurgery", specifier = ">=0.0.16" },
+    { name = "llmsurgery", specifier = ">=0.0.13" },
     { name = "uraiyadal", specifier = ">=0.0.1" },
 ]
 
