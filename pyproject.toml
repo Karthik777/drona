@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "drona"
+name = "dhrona"
 dynamic = ["version"]
 description = "train agents to choose and use the right tools"
 readme = "README.md"
@@ -18,29 +18,29 @@ classifiers = [
 dependencies = ["fastcore>=2.1.16", "aidialog>=0.0.27", "uraiyadal>=0.0.1", "llmsurgery>=0.0.16"]
 
 [project.scripts]
-drona = "drona.core:main"
-drona-capture = "drona.rounds:capture_cli"
-drona-accept = "drona.rounds:accept_cli"
-drona-start = "drona.rounds:start_cli"
-drona-import = "drona.sessions:import_cli"
-drona-export = "drona.sessions:export_cli"
-drona-tools = "drona.tools:tools_cli"
+dhrona = "dhrona.core:main"
+dhrona-capture = "dhrona.rounds:capture_cli"
+dhrona-accept = "dhrona.rounds:accept_cli"
+dhrona-start = "dhrona.rounds:start_cli"
+dhrona-import = "dhrona.sessions:import_cli"
+dhrona-export = "dhrona.sessions:export_cli"
+dhrona-tools = "dhrona.tools:tools_cli"
 
 [project.urls]
 Repository = "https://github.com/Karthik777/drona"
 Documentation = "https://Karthik777.github.io/drona/"
 
 [project.entry-points.nbdev]
-drona = "drona._modidx:d"
+dhrona = "dhrona._modidx:d"
 
 [tool.hatch.build.targets.wheel]
-packages = ["drona"]
+packages = ["dhrona"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/drona", "/README.md", "/pyproject.toml"]
+include = ["/dhrona", "/README.md", "/pyproject.toml"]
 
 [tool.hatch.version]
-path = "drona/__init__.py"
+path = "dhrona/__init__.py"
 
 [dependency-groups]
 dev = [

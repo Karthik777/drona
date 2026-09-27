@@ -17,27 +17,27 @@ from aidialog.hist import chat2dlg, dlg2chat
 from aidialog.ipynb import read_ipynb, write_ipynb
 from aidialog.msg_parts import Msg, Text, ToolUse, ToolResult
 from fastcore.script import call_parse
-from .core import RAMABANA_HISTORY, ROUNDS_DIR, assess_history, drona_version, read_history
+from .core import RAMABANA_HISTORY, ROUNDS_DIR, assess_history, dhrona_version, read_history
 
 # %% ../nbs/01_rounds.ipynb #d4f6b8c0
-REVIEW_KEY = 'drona'
+REVIEW_KEY = 'dhrona'
 
 def read_dialog(source):
-    "Read a Drona dialog notebook."
+    "Read a Dhrona dialog notebook."
     if not (dlg := read_ipynb(source)): raise ValueError(f'Could not read dialog {source}')
     return dlg
 
 def _prompts(dlg): return [m for m in dlg if m.msg_type == sprompt and not m.skipped]
 
 def clean_dialog(source):
-    "Prompt messages from a Drona notebook, without review notes."
+    "Prompt messages from a Dhrona notebook, without review notes."
     dlg = read_dialog(source)
     if not (prompts := _prompts(dlg)): raise ValueError('Dialog contains no prompt turns')
     return Dialog(prompts, name=dlg.name, meta=dlg.meta)
 
 def _add_review(dlg, report, text):
     dlg.meta[REVIEW_KEY] = report
-    dlg.mk_message(f'# Drona review\n\n{text}', idx=0, msg_type=snote, skipped=1, meta={REVIEW_KEY: report})
+    dlg.mk_message(f'# Dhrona review\n\n{text}', idx=0, msg_type=snote, skipped=1, meta={REVIEW_KEY: report})
 
 def _write_dlg(dlg, output):
     output = Path(output)
@@ -82,7 +82,7 @@ def capture(
     assessment = assess_history(matches)
     msgs = [m for ti, turn in enumerate(matches) for m in _turn_msgs(turn, ti)]
     dlg = chat2dlg(msgs, name or Path(output).stem, mx=None)
-    report = {'version': drona_version(), 'session': matches[0].get('session'), 'model': matches[-1].get('model'),
+    report = {'version': dhrona_version(), 'session': matches[0].get('session'), 'model': matches[-1].get('model'),
               'status': 'review', 'score': assessment.score,
               'findings': [asdict(f) for f in assessment.findings]}
     _add_review(dlg, report, 'Edit this dialog in Leela. Remove poor routes and sensitive content. Set `reviewer` when accepting.')
@@ -109,7 +109,7 @@ def accept(
     if not history or history[0].role != 'user': raise ValueError('Round must start with a user turn')
     meta = dict(dlg.meta.get(REVIEW_KEY) or {})
     tools = sorted({p.name for m in history for p in m.content if isinstance(p, ToolUse)})
-    meta.update(status='accepted', reviewer=reviewer, accepted_version=drona_version(), tools=tools)
+    meta.update(status='accepted', reviewer=reviewer, accepted_version=dhrona_version(), tools=tools)
     dlg.meta[REVIEW_KEY] = meta
     dlg.save(source)
     output = Path(output) if output else Path(source).with_suffix('.json')
@@ -133,7 +133,7 @@ def _history_dicts(history):
 def bootstrap_prompt(source):
     "A compact prompt containing one accepted worked round."
     history = compiled_history(source)
-    rows = ['The following reviewed Drona round demonstrates the tool route to follow.']
+    rows = ['The following reviewed Dhrona round demonstrates the tool route to follow.']
     for m in history:
         if m.role == 'user': rows.append(f'User: {m.text}')
         elif m.role == 'assistant':
@@ -143,7 +143,7 @@ def bootstrap_prompt(source):
         elif m.role == 'tool':
             for p in m.content:
                 if isinstance(p, ToolResult): rows.append(f'Tool result: {p.text}')
-    rows.append('Reply with exactly: DRONA_READY')
+    rows.append('Reply with exactly: DHRONA_READY')
     return '\n\n'.join(rows)
 
 def start_commands(
@@ -159,7 +159,7 @@ def start_commands(
     return cmd, ['ramabana', '--root', root, '--resume', 'latest']
 
 def start_round(source, root='.', model=None, launch=False):
-    "Prepare or launch Ramabana with an accepted Drona round."
+    "Prepare or launch Ramabana with an accepted Dhrona round."
     first, resume = start_commands(source, root, model)
     if not launch: return {'bootstrap': first, 'resume': resume}
     subprocess.run(first, check=True)

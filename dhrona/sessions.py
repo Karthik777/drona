@@ -49,12 +49,12 @@ def import_session(
 
 # %% ../nbs/02_sessions.ipynb #d8739129
 def export_session(
-    source,          # Drona review notebook
+    source,          # Dhrona review notebook
     host,            # `ramabana`, `claude`, or `codex`
     output=None,     # JSON output for Ramabana or Codex
     cwd=None,        # Claude project directory
 ):
-    "Compile one Drona notebook for a target host."
+    "Compile one Dhrona notebook for a target host."
     if host not in HOSTS: raise ValueError(f'host must be one of {HOSTS}')
     dlg = clean_dialog(source)
     if host == 'claude': return ant.dlg2sess(dlg, cwd=cwd)

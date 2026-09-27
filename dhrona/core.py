@@ -7,7 +7,7 @@ Docs: https://Karthik777.github.io/drona/core.html.md"""
 # %% auto #0
 __all__ = ['RAMABANA_HISTORY', 'SHELL_TOOLS', 'ROUND_REVISION', 'ROUNDS_DIR', 'SEEDS_DIR', 'Finding', 'Assessment',
            'read_history', 'tool_args', 'bypass_tool', 'assess_turn', 'assess_history', 'call_valid', 'as_tools',
-           'round_calls', 'round_valid', 'load_rounds', 'round_msgs', 'warm_start', 'drona_version', 'receipt_path',
+           'round_calls', 'round_valid', 'load_rounds', 'round_msgs', 'warm_start', 'dhrona_version', 'receipt_path',
            'register_completion', 'completion_valid', 'prepare_chat', 'main']
 
 # %% ../nbs/00_core.ipynb #d04693b6
@@ -19,7 +19,7 @@ from fastcore.script import call_parse
 from fastcore.xdg import xdg_state_home, xdg_config_home
 from fastcore.foundation import L
 from urai import ToolCall, mk_tool_res_msg
-import drona
+import dhrona
 
 # %% ../nbs/00_core.ipynb #2edea58c
 @dataclass(frozen=True)
@@ -126,8 +126,8 @@ def assess_history(turns):
 
 # %% ../nbs/00_core.ipynb #2d9bf58b
 ROUND_REVISION = 1
-ROUNDS_DIR = xdg_config_home()/'drona/rounds'
-SEEDS_DIR = Path(drona.__file__).parent/'seeds'
+ROUNDS_DIR = xdg_config_home()/'dhrona/rounds'
+SEEDS_DIR = Path(dhrona.__file__).parent/'seeds'
 
 def call_valid(args, fn):
     "Would `fn` accept `args` as keyword arguments?"
@@ -182,19 +182,19 @@ def warm_start(tools=None, model=None, limit=2, dirs=None):
     rs = sorted(rs, key=lambda r: r['meta'].get('model') != model)[:limit]
     return [m for r in rs for m in round_msgs(r)]
 
-def drona_version():
+def dhrona_version():
     "The warm-start revision."
-    return f'{drona.__version__}:{ROUND_REVISION}'
+    return f'{dhrona.__version__}:{ROUND_REVISION}'
 
 def receipt_path(state=None):
     "The completion receipt file."
-    return Path(state) if state else xdg_state_home()/'drona/completions.json'
+    return Path(state) if state else xdg_state_home()/'dhrona/completions.json'
 
 def register_completion(state=None):
     "Record one clean round and return its completion id."
     path, cid = receipt_path(state), uuid.uuid4().hex
     records = path.read_json() if path.exists() else {}
-    records[cid] = {'version': drona_version(), 'at': time.time()}
+    records[cid] = {'version': dhrona_version(), 'at': time.time()}
     path.write_json(records, indent=2)
     return cid
 
@@ -202,11 +202,11 @@ def completion_valid(cid, state=None):
     "Does `cid` name a completion for the current round?"
     path = receipt_path(state)
     if not cid or not path.exists(): return False
-    return (path.read_json().get(cid) or {}).get('version') == drona_version()
+    return (path.read_json().get(cid) or {}).get('version') == dhrona_version()
 
 def prepare_chat(chat, tools=None, model=None):
-    "Prepend the Drona warm start to an empty Urai-compatible chat."
-    if chat.hist: raise ValueError('Drona prepares an empty chat only')
+    "Prepend the Dhrona warm start to an empty Urai-compatible chat."
+    if chat.hist: raise ValueError('Dhrona prepares an empty chat only')
     chat.hist = chat.fmt2hist(warm_start(tools, model))
     if hasattr(chat, '_recreate_conv'): chat._recreate_conv()
     return chat

@@ -2,7 +2,7 @@ project:
   output-dir: _docs
 
 website:
-  title: "drona"
+  title: "dhrona"
   site-url: "https://Karthik777.github.io/drona"
   description: "train agents to choose and use the right tools"
   repo-branch: main

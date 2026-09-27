@@ -1,10 +1,12 @@
 # Tool simplification and warm starts — design
 
-Date: 2026-09-26 · Repos: drona, vishalakshi, shalya, ramabana, leela
+Package renamed drona → dhrona (PyPI name taken) on 2026-09-27.
+
+Date: 2026-09-26 · Repos: dhrona, vishalakshi, shalya, ramabana, leela
 
 ## Goal
 
-Agents built on shalya/ramabana/leela are offered 70–90 tools per turn (shalya 56, ramabana +14, leela +~20). Only ~11 are used heavily and ~25 at all. Make the model pick the right tool by (a) fixing tools whose plumbing or schema makes them fail or unattractive, (b) removing true duplicates and model-facing housekeeping, (c) gating contextual tools to their mode, and (d) teaching the remaining set with drona warm-start rounds. Simplify code toward fastai style along the way. Release each package to PyPI and consume the releases downstream.
+Agents built on shalya/ramabana/leela are offered 70–90 tools per turn (shalya 56, ramabana +14, leela +~20). Only ~11 are used heavily and ~25 at all. Make the model pick the right tool by (a) fixing tools whose plumbing or schema makes them fail or unattractive, (b) removing true duplicates and model-facing housekeeping, (c) gating contextual tools to their mode, and (d) teaching the remaining set with dhrona warm-start rounds. Simplify code toward fastai style along the way. Release each package to PyPI and consume the releases downstream.
 
 Non-goals: fine-tuning weights; redesigning the agent loop; refactoring leela/ramabana monoliths beyond the touched code.
 
@@ -21,7 +23,7 @@ Non-goals: fine-tuning weights; redesigning the agent loop; refactoring leela/ra
 2. Housekeeping (polling, staleness, environment) belongs to the harness, not model tools.
 3. Contextual tools appear only in their context.
 4. Tool params are native types (`list`, `dict`, `bool`), never JSON-encoded strings.
-5. Drona measures before/after and teaches with rounds.
+5. Dhrona measures before/after and teaches with rounds.
 
 ## Target tool set
 
@@ -52,13 +54,13 @@ Removed names keep a one-release deprecation shim only where external callers ex
 
 ## Per-repo design
 
-### drona (phase 1)
+### dhrona (phase 1)
 
 - Fix `core.py:70` precedence bug (`tool=='edit_cell' and any(s in detail for s in (...))`).
 - Simplify: fastcore `Path` everywhere, `read_json`/`write_json`, `asdict`, one shared helper for "prompts not skipped → Dialog" and the review-note cell used by `rounds.py`/`sessions.py`, no needless lazy imports.
-- `drona-tools [--since DATE] [--model M] [--history PATH...]` (CLI name `drona-tools`): per-tool calls, fail rate, top failure details, shell/python bypasses (classifier mapping command → dedicated tool), per-model bypass share. JSON and a compact table. This is the before/after instrument.
+- `dhrona-tools [--since DATE] [--model M] [--history PATH...]` (CLI name `dhrona-tools`): per-tool calls, fail rate, top failure details, shell/python bypasses (classifier mapping command → dedicated tool), per-model bypass share. JSON and a compact table. This is the before/after instrument.
 - Assessment findings extended with `bypass` (shell command with a dedicated tool) and `schema` (JSONDecodeError on any tool).
-- Rounds carry `meta['drona']['tools']` (tools demonstrated) and `model`. A round library dir (`~/.config/drona/rounds/` + packaged seeds; `drona-accept --install` adds to it). `warm_start(tools, model=None)` selects accepted rounds that are valid while every recorded call binds to the live tool signature (`call_valid`, via `inspect.signature(...).bind`); stale rounds are skipped, same-model rounds sort first. Replace the hard-coded Urai demo with a seed round.
+- Rounds carry `meta['dhrona']['tools']` (tools demonstrated) and `model`. A round library dir (`~/.config/dhrona/rounds/` + packaged seeds; `dhrona-accept --install` adds to it). `warm_start(tools, model=None)` selects accepted rounds that are valid while every recorded call binds to the live tool signature (`call_valid`, via `inspect.signature(...).bind`); stale rounds are skipped, same-model rounds sort first. Replace the hard-coded Urai demo with a seed round.
 - Seed rounds: git flow (status → diff → commit → divergence → remote), notebook edit (notebook_cells → view_cell → edit_cell), search (search_code vs grep vs ls), memory (remember with key → memory_search), delegation.
 - Release 0.1.0 to PyPI (confirm before upload).
 
@@ -85,7 +87,7 @@ Removed names keep a one-release deprecation shim only where external callers ex
 - Git: snapshot/settle tree around git writes so rewind sees them; `before_tool` hook on run_shell classifying `git commit|push|pull|fetch|stash|switch|checkout` → error pointing at the git tool; RULES entry keyed on `git_status`; rewrite the CLAUDE_NOTES git line to exempt read tools.
 - Drop `exhash` from INLINE_SKILLS when edit_file is not offered (~3k tokens/turn).
 - Harness fires watch polling at turn start (already ticks) and injects notes.
-- Warm start: `session_start` calls `drona.warm_start(tool_names, model)` when drona is installed (optional dep `ramabana[drona]`); `--no-warm` flag.
+- Warm start: `session_start` calls `dhrona.warm_start(tool_names, model)` when dhrona is installed (optional dep `ramabana[dhrona]`); `--no-warm` flag.
 - Trim `tools.py` re-export shim of removed names. Release 0.2.0.
 
 ### leela (phase 5; starts after the user commits current agent-pane WIP)
@@ -93,20 +95,20 @@ Removed names keep a one-release deprecation shim only where external callers ex
 - Bump ramabana/shalya; remove shims for inspect_var, search_all, api_access; never advertise user_steering.
 - Gate canvas_* on canvas open and news_* on feeds; if the backend fixes its tool list per session, rebuild the tool list at turn start (verify in `Assistant.tools` / `TurnRunner`).
 - `vault_pii` no longer governs ask; ask uses local-else-redact.
-- `Threads.new` applies `drona.warm_start`.
+- `Threads.new` applies `dhrona.warm_start`.
 - Consolidate the seven `leela/agent/*.py` shims into `leela/agent/__init__.py`. Release via fastship.
 
 ## Testing
 
-- Each phase: nbdev test cells (drona/shalya/ramabana, run `nbdev-prepare`) or pytest (leela, vishalakshi) covering new params, removed names, and failure paths (bad JSON no longer possible for list params; git write returns undo; stale marking; ask policy never off).
-- `drona-tools` baseline captured before phase 3 and re-run after phase 5 on fresh sessions; success = JSON decode failures ≈ 0, git shell writes ≈ 0, default tool count ≤ 45 with vault+subagents.
+- Each phase: nbdev test cells (dhrona/shalya/ramabana, run `nbdev-prepare`) or pytest (leela, vishalakshi) covering new params, removed names, and failure paths (bad JSON no longer possible for list params; git write returns undo; stale marking; ask policy never off).
+- `dhrona-tools` baseline captured before phase 3 and re-run after phase 5 on fresh sessions; success = JSON decode failures ≈ 0, git shell writes ≈ 0, default tool count ≤ 45 with vault+subagents.
 
 ## Release order
 
-drona → vishalakshi → shalya → ramabana → leela. Each release bumps the downstream pin. PyPI uploads happen only after explicit user confirmation per package.
+dhrona → vishalakshi → shalya → ramabana → leela. Each release bumps the downstream pin. PyPI uploads happen only after explicit user confirmation per package.
 
 ## Risks
 
 - Leela backend may bind tools once per session; contextual gating may need a backend rebuild — verify before implementing.
-- Renamed/removed tools break saved approval rules and old drona rounds; `call_valid` makes rounds stale explicitly (a call that no longer binds to the live signature drops the round), approval rules keyed on removed names are dropped with a log line.
+- Renamed/removed tools break saved approval rules and old dhrona rounds; `call_valid` makes rounds stale explicitly (a call that no longer binds to the live signature drops the round), approval rules keyed on removed names are dropped with a log line.
 - Git undo/rewind integration touches ramabana's `_record`; keep it behind the existing snapshot API.
