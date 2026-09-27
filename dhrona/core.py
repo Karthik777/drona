@@ -7,11 +7,11 @@ Docs: https://Karthik777.github.io/drona/core.html.md"""
 # %% auto #0
 __all__ = ['RAMABANA_HISTORY', 'SHELL_TOOLS', 'ROUND_REVISION', 'ROUNDS_DIR', 'SEEDS_DIR', 'Finding', 'Assessment',
            'read_history', 'tool_args', 'bypass_tool', 'denial_reason', 'assess_turn', 'assess_history', 'call_valid',
-           'as_tools', 'round_calls', 'round_valid', 'load_rounds', 'round_msgs', 'warm_start', 'dhrona_version',
-           'receipt_path', 'register_completion', 'completion_valid', 'prepare_chat', 'main']
+           'as_tools', 'round_calls', 'misfit', 'round_valid', 'load_rounds', 'round_msgs', 'fit_rounds', 'warm_start',
+           'dhrona_version', 'receipt_path', 'register_completion', 'completion_valid', 'prepare_chat', 'main']
 
 # %% ../nbs/00_core.ipynb #d04693b6
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, replace
 import json, re, sys, time, uuid, inspect, functools
 from fastcore.basics import ifnone
 from fastcore.xtras import Path
@@ -29,6 +29,7 @@ class Finding:
     tool: str
     index: int
     message: str
+    turn: int|None = None
 
 @dataclass(frozen=True)
 class Assessment:
@@ -143,7 +144,7 @@ def assess_history(turns):
     "Assess several turns as one route corpus, carrying refusals into the next turn of the same session."
     turns = list(turns)
     assessments = [assess_turn(t, _carried(p, t)) for p,t in zip([None]+turns, turns)]
-    findings = tuple(f for a in assessments for f in a.findings)
+    findings = tuple(replace(f, turn=i) for i,a in enumerate(assessments) for f in a.findings)
     return Assessment(max(0, 100 - 20*len(findings)), sum(a.calls for a in assessments), findings)
 
 # %% ../nbs/00_core.ipynb #2d9bf58b
@@ -170,9 +171,18 @@ def round_calls(rnd):
     "The `(tool, arguments)` pairs an accepted round makes."
     return [(p['name'], p.get('arguments') or {}) for m in rnd['history'] for p in m['content'] if p['type']=='tool_use']
 
+def misfit(rnd, tools):
+    "Why `rnd` does not bind to `tools` (a missing tool or a call that no longer matches), or `''` when it fits."
+    for n,a in round_calls(rnd):
+        if n not in tools: return f'tool {n} is not offered here'
+        if tools[n] is None: continue
+        try: inspect.signature(tools[n]).bind(**a)
+        except (TypeError, ValueError) as e: return f'{n}({", ".join(a)}) does not match this signature: {e}'
+    return ''
+
 def round_valid(rnd, tools):
     "Do all of `rnd`'s calls bind to `tools`? A `None` tool checks the name only."
-    return all(n in tools and (tools[n] is None or call_valid(a, tools[n])) for n,a in round_calls(rnd))
+    return not misfit(rnd, tools)
 
 def load_rounds(dirs=None):
     "Accepted rounds from the library and packaged seeds, skipping unreadable files."
@@ -195,14 +205,19 @@ def round_msgs(rnd):
         res.append(msg)
     return res
 
+def fit_rounds(tools=None, model=None, limit=2, dirs=None):
+    "Accepted rounds that fit the offered tools, best-ranked and same-model first, and every round left out with its reason."
+    tools, used, skipped = None if tools is None else as_tools(tools), [], []
+    for r in sorted(load_rounds(dirs), key=lambda r: (r['meta'].get('rank', 50), r['meta'].get('model') != model)):
+        why = misfit(r, tools) if tools is not None else ''
+        if why: skipped.append((r, why))
+        elif len(used) < limit: used.append(r)
+        else: skipped.append((r, f'over the limit of {limit}'))
+    return used, skipped
+
 def warm_start(tools=None, model=None, limit=2, dirs=None):
     "Canonical Urai history from accepted rounds that fit the offered tools, best-ranked and same-model first."
-    rs = load_rounds(dirs)
-    if tools is not None:
-        tools = as_tools(tools)
-        rs = [r for r in rs if round_valid(r, tools)]
-    rs = sorted(rs, key=lambda r: (r['meta'].get('rank', 50), r['meta'].get('model') != model))[:limit]
-    return [m for r in rs for m in round_msgs(r)]
+    return [m for r in fit_rounds(tools, model, limit, dirs)[0] for m in round_msgs(r)]
 
 def dhrona_version():
     "The warm-start revision."

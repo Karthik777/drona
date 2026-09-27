@@ -6,7 +6,8 @@ Docs: https://Karthik777.github.io/drona/rounds.html.md"""
 
 # %% auto #0
 __all__ = ['REVIEW_KEY', 'read_dialog', 'clean_dialog', 'latest_session', 'capture', 'compiled_history', 'accept',
-           'bootstrap_prompt', 'start_commands', 'start_round', 'capture_cli', 'accept_cli', 'start_cli']
+           'install_round', 'bootstrap_prompt', 'start_commands', 'start_round', 'capture_cli', 'accept_cli',
+           'start_cli']
 
 # %% ../nbs/01_rounds.ipynb #af82ef79
 from dataclasses import asdict
@@ -109,17 +110,22 @@ def accept(
     if not history or history[0].role != 'user': raise ValueError('Round must start with a user turn')
     meta = dict(dlg.meta.get(REVIEW_KEY) or {})
     tools = sorted({p.name for m in history for p in m.content if isinstance(p, ToolUse)})
-    meta.update(status='accepted', reviewer=reviewer, accepted_version=dhrona_version(), tools=tools)
+    meta.update(name=dlg.name or Path(source).stem, status='accepted', reviewer=reviewer, accepted_version=dhrona_version(), tools=tools)
     dlg.meta[REVIEW_KEY] = meta
     dlg.save(source)
     output = Path(output) if output else Path(source).with_suffix('.json')
     data = {'meta': meta, 'history': _history_dicts(history)}
     output.write_json(data, indent=2)
-    if install:
-        lib = (ROUNDS_DIR if install is True else Path(install))/f'{dlg.name or Path(source).stem}.json'
-        lib.parent.mkdir(parents=True, exist_ok=True)
-        lib.write_json(data, indent=2)
+    if install: install_round(output, install)
     return output
+
+def install_round(source, into=True, name=''):
+    "Copy a compiled round into the rounds library (`ROUNDS_DIR`, or the directory `into`) under `name` (default: the round's `meta.name`); returns that path."
+    data = Path(source).read_json()
+    lib = (ROUNDS_DIR if into is True else Path(into))/f"{name or data['meta'].get('name') or Path(source).stem}.json"
+    lib.parent.mkdir(parents=True, exist_ok=True)
+    lib.write_json(data, indent=2)
+    return lib
 
 def _part_dict(part):
     data = {'type': str(getattr(part.type, 'value', part.type))}
