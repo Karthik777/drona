@@ -1,0 +1,94 @@
+{
+ "meta": {
+  "name": "delegation",
+  "status": "accepted",
+  "reviewer": "Karthik",
+  "tools": [
+   "delegate_search",
+   "view_file"
+  ],
+  "model": null,
+  "rank": 60
+ },
+ "history": [
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "Where is the retry budget set, and which tests cover it?"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Two independent, self-contained questions: one `delegate_search` call runs them in parallel sub-agents and returns only their conclusions, keeping the search out of this context."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_del",
+     "name": "delegate_search",
+     "arguments": {
+      "questions": [
+       "Where is the retry budget set?",
+       "Which tests cover it?"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_del",
+     "name": "delegate_search",
+     "text": "### Where is the retry budget set?\n`RETRY_BUDGET = 3` at pkg/retry.py:8, read by `with_retries` at pkg/retry.py:10.\n\n### Which tests cover it?\ntests/test_retry.py: `test_budget_exhausted` (line 21) and `test_budget_resets` (line 30) both patch RETRY_BUDGET."
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "A sub-agent's report is a hypothesis until a tool result of my own confirms it: read the cited lines."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_view",
+     "name": "view_file",
+     "arguments": {
+      "path": "pkg/retry.py",
+      "start": 8,
+      "end": 10
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_view",
+     "name": "view_file",
+     "text": "8|4d1e|RETRY_BUDGET = 3\n9|e2a7|\n10|b7c0|def with_retries(f, budget=RETRY_BUDGET):"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "The retry budget is `RETRY_BUDGET = 3` in pkg/retry.py:8, consumed by `with_retries` (pkg/retry.py:10); I confirmed both lines by reading the file. The sub-agent reports tests/test_retry.py `test_budget_exhausted` (line 21) and `test_budget_resets` (line 30) as the covering tests; I did not open that file, so treat those two as its finding rather than mine."
+    }
+   ]
+  }
+ ]
+}

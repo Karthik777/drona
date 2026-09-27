@@ -1,0 +1,119 @@
+{
+ "meta": {
+  "name": "search-choice",
+  "status": "accepted",
+  "reviewer": "Karthik",
+  "tools": [
+   "search_code",
+   "grep",
+   "ls"
+  ],
+  "model": null,
+  "rank": 20
+ },
+ "history": [
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "Where is the threshold computed, and which files use it?"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Two different questions. \"Where is it computed\" is a concept, so `search_code` (semantic when an index is ready); the callers are a literal token, which is `grep`'s job."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_search",
+     "name": "search_code",
+     "arguments": {
+      "query": "threshold halving budget"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_search",
+     "name": "search_code",
+     "text": "[semantic index]\npkg/sizes.py:1  threshold  def threshold(n):\n  FILE -- use this exact path with view_file/replace_text\npkg/budget.py:12  spend  cap = threshold(total)\n  FILE -- use this exact path with view_file/replace_text"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "The definition is pkg/sizes.py:1. For every call site, grep the literal `threshold(` with `regex=False`; as a regex the parenthesis would open a group."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_grep",
+     "name": "grep",
+     "arguments": {
+      "pattern": "threshold(",
+      "regex": false
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_grep",
+     "name": "grep",
+     "text": "3 match(es)\npkg/sizes.py:1: def threshold(n):\npkg/budget.py:12:     cap = threshold(total)\ntests/test_sizes.py:4:     assert threshold(10) == 5"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "One definition, two callers. A listing of pkg shows whether any module there was missed."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_ls",
+     "name": "ls",
+     "arguments": {
+      "path": "pkg"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_ls",
+     "name": "ls",
+     "text": "/work/pkg-repo/pkg/\n  __init__.py  0\n  budget.py  418\n  sizes.py  96"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "`threshold` is computed in pkg/sizes.py:1 (`def threshold(n)`). It is used in pkg/budget.py:12 (`cap = threshold(total)`) and tests/test_sizes.py:4. Each tool did one job: `search_code` found the concept without knowing the exact name, `grep` with `regex=False` listed every literal call site, and `ls` confirmed pkg holds only those modules, so nothing was missed."
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,130 @@
+{
+ "meta": {
+  "name": "memory-key",
+  "status": "accepted",
+  "reviewer": "Karthik",
+  "tools": [
+   "remember",
+   "memory_search"
+  ],
+  "model": null,
+  "rank": 50
+ },
+ "history": [
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "Remember that this repo uses uv, never pip install."
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "A durable fact about the environment: `remember` it with a `key`, so a later correction replaces this note instead of adding a second one."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_rem1",
+     "name": "remember",
+     "arguments": {
+      "text": "This repo uses uv; never pip install.",
+      "title": "Tooling",
+      "tags": "env",
+      "key": "tooling-uv"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_rem1",
+     "name": "remember",
+     "text": "remembered 'Tooling' as d7"
+    }
+   ]
+  },
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "Also: add deps with `uv add`, not by editing pyproject."
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "The same fact, refined. Reuse the key so the note is replaced rather than duplicated."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_rem2",
+     "name": "remember",
+     "arguments": {
+      "text": "This repo uses uv; never pip install. Add deps with `uv add`, not by editing pyproject.",
+      "key": "tooling-uv"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_rem2",
+     "name": "remember",
+     "text": "remembered 'Tooling' as d7 (replaced)"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Check that memory now returns the one merged note."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_msearch",
+     "name": "memory_search",
+     "arguments": {
+      "query": "package manager"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_msearch",
+     "name": "memory_search",
+     "text": "[{\"node_id\": \"d7#1\", \"doc_id\": \"d7\", \"breadcrumb\": \"Tooling\", \"score\": 0.91, \"snippet\": \"This repo uses uv; never pip install. Add deps with `uv add`, not by editing pyproject.\", \"age\": 3, \"stale\": false}]"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Stored as one note, `Tooling` (d7), keyed `tooling-uv`: uv only, `uv add` for dependencies. The second `remember` replaced the first instead of adding a duplicate, and `memory_search` returns it fresh (age 3s, not stale)."
+    }
+   ]
+  }
+ ]
+}

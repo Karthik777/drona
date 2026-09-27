@@ -196,12 +196,12 @@ def round_msgs(rnd):
     return res
 
 def warm_start(tools=None, model=None, limit=2, dirs=None):
-    "Canonical Urai history from accepted rounds that fit the offered tools."
+    "Canonical Urai history from accepted rounds that fit the offered tools, best-ranked and same-model first."
     rs = load_rounds(dirs)
     if tools is not None:
         tools = as_tools(tools)
         rs = [r for r in rs if round_valid(r, tools)]
-    rs = sorted(rs, key=lambda r: r['meta'].get('model') != model)[:limit]
+    rs = sorted(rs, key=lambda r: (r['meta'].get('rank', 50), r['meta'].get('model') != model))[:limit]
     return [m for r in rs for m in round_msgs(r)]
 
 def dhrona_version():

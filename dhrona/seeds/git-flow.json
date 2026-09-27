@@ -1,0 +1,173 @@
+{
+ "meta": {
+  "name": "git-flow",
+  "status": "accepted",
+  "reviewer": "Karthik",
+  "tools": [
+   "git_status",
+   "git_diff",
+   "git_commit",
+   "git_divergence",
+   "git_remote"
+  ],
+  "model": null,
+  "rank": 10
+ },
+ "history": [
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "Commit the fix in sizes.py and push."
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Git goes through the git tools, not run_shell. Status first, so the commit covers exactly what changed."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_status",
+     "name": "git_status",
+     "arguments": {}
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_status",
+     "name": "git_status",
+     "text": "{\n  \"result\": \"\",\n  \"root\": \"/work/pkg-repo\",\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"branches\": [\n    \"main\"\n  ],\n  \"ahead\": 0,\n  \"behind\": 0,\n  \"clean\": false,\n  \"changes\": [\n    {\n      \"path\": \"pkg/sizes.py\",\n      \"old_path\": null,\n      \"index\": \" \",\n      \"worktree\": \"M\",\n      \"staged\": false\n    }\n  ]\n}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "One modified file and nothing staged. Read the hunk so the message describes the change, not the file."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_diff",
+     "name": "git_diff",
+     "arguments": {
+      "path": "pkg/sizes.py"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_diff",
+     "name": "git_diff",
+     "text": "diff --git a/pkg/sizes.py b/pkg/sizes.py\n--- a/pkg/sizes.py\n+++ b/pkg/sizes.py\n@@ -1,2 +1,2 @@\n def threshold(n):\n-    return n\n+    return n // 2"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "The change halves the threshold. `git_commit` stages that one path and commits it; the result carries an `undo` token in case the change has to come back out."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_commit",
+     "name": "git_commit",
+     "arguments": {
+      "message": "Halve the threshold",
+      "paths": "pkg/sizes.py"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_commit",
+     "name": "git_commit",
+     "text": "{\n  \"result\": \"committed 9c1e7d2 Halve the threshold\",\n  \"summary\": \"1 file changed, 1 insertion(+), 1 deletion(-)\",\n  \"undo\": \"sp_ab12\",\n  \"undoes\": \"commit 9c1e7d2 (Halve the threshold) on 3f2a9b1\",\n  \"head\": \"9c1e7d2\",\n  \"moved\": true,\n  \"root\": \"/work/pkg-repo\",\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"branches\": [\n    \"main\"\n  ],\n  \"ahead\": 1,\n  \"behind\": 0,\n  \"clean\": true,\n  \"changes\": []\n}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Before pushing, see where main stands against its upstream."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_div",
+     "name": "git_divergence",
+     "arguments": {}
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_div",
+     "name": "git_divergence",
+     "text": "{\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"relation\": \"ahead\",\n  \"ahead\": 1,\n  \"behind\": 0,\n  \"merge_base\": \"3f2a9b1\",\n  \"recommended\": \"\",\n  \"clean\": true\n}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Ahead by one, behind by none: the push is a plain fast-forward for the remote."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_push",
+     "name": "git_remote",
+     "arguments": {
+      "op": "push"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_push",
+     "name": "git_remote",
+     "text": "{\n  \"result\": \"pushed main\",\n  \"summary\": \"pushed main\",\n  \"undo\": \"\",\n  \"undoes\": \"\",\n  \"head\": \"9c1e7d2\",\n  \"moved\": false,\n  \"root\": \"/work/pkg-repo\",\n  \"branch\": \"main\",\n  \"upstream\": \"origin/main\",\n  \"branches\": [\n    \"main\"\n  ],\n  \"ahead\": 0,\n  \"behind\": 0,\n  \"clean\": true,\n  \"changes\": []\n}"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Committed `9c1e7d2` \"Halve the threshold\" (pkg/sizes.py) and pushed it to origin/main. The commit's `undo` token is `sp_ab12`, so `/rewind` can take it back if the change turns out wrong; the push itself has no undo."
+    }
+   ]
+  }
+ ]
+}

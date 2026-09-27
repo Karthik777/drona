@@ -11,7 +11,7 @@ Dhrona measures how agents use their tools and teaches better routes. It reads R
 2.  **Capture** — `dhrona-capture` turns a finished Ramabana session into an Aidialog review notebook.
 3.  **Review in Leela** — open the notebook, remove detours and sensitive content, keep the route future models should imitate.
 4.  **Accept** — `dhrona-accept --install` records the reviewer, the tools used and the model, compiles canonical history, and installs it in the rounds library.
-5.  **Warm start** — `warm_start(tools, model)` replays accepted rounds whose recorded calls still bind to the offered tools’ live signatures, same-model rounds first.
+5.  **Warm start** — `warm_start(tools, model)` replays accepted rounds whose recorded calls still bind to the offered tools’ live signatures, best-ranked and same-model rounds first.
 
 Re-run `dhrona-tools` after a change to see whether tool use moved.
 
@@ -75,7 +75,17 @@ Ramabana receives the accepted round as its first bootstrap turn and saves it. D
 
 ## Warm start a chat
 
-[`warm_start`](https://Karthik777.github.io/drona/core.html#warm_start) returns canonical Urai history from the accepted rounds in the library and the seeds packaged with dhrona. Pass the tools you offer (a list of callables or tool names, or a name → callable dict) and only rounds whose recorded calls bind to those signatures ([`call_valid`](https://Karthik777.github.io/drona/core.html#call_valid)) are replayed; a round for a renamed or re-parameterised tool is skipped rather than taught. Pass it to any Urai or Rishi chat through `messages=`, or call [`prepare_chat`](https://Karthik777.github.io/drona/core.html#prepare_chat) on an empty chat.
+[`warm_start`](https://Karthik777.github.io/drona/core.html#warm_start) returns canonical Urai history from the accepted rounds in the library and the seeds packaged with dhrona. Pass the tools you offer (a list of callables or tool names, or a name → callable dict) and only rounds whose recorded calls bind to those signatures ([`call_valid`](https://Karthik777.github.io/drona/core.html#call_valid)) are replayed; a round for a renamed or re-parameterised tool is skipped rather than taught. Rounds sort by `meta.rank` (lower first), then same-model first, and `limit` keeps the best few. Pass it to any Urai or Rishi chat through `messages=`, or call [`prepare_chat`](https://Karthik777.github.io/drona/core.html#prepare_chat) on an empty chat.
+
+Seven seeds ship with dhrona, each one short session on the shalya 0.1.0 / ramabana 0.2.0 tool set:
+
+- `git-flow` (rank 10) — `git_status` → `git_diff` → `git_commit(message, paths)` → `git_divergence` → `git_remote(op='push')`: git through the git tools, and the commit result’s `undo` token.
+- `search-choice` (rank 20) — `search_code` for a concept, `grep(regex=False)` for literal callers, `ls` for a folder: which search tool fits which question.
+- `notebook-edit` (rank 30) — `notebook_cells` → `view_cell` → `edit_cell(path, cell_id, edits)`: notebooks are edited by cell id with native `edits`.
+- `approval-refused` (rank 40) — `view_file` → `replace_text(path, edits)` refused: name the refused edit, say nothing changed, ask once.
+- `memory-key` (rank 50) — `remember(key=)` twice, then `memory_search`: a key replaces a note instead of duplicating it.
+- `delegation` (rank 60) — `delegate_search(questions=[...])`, then `view_file` on the cited lines: a sub-agent’s report is a hypothesis until confirmed.
+- `fossick-github` — `run_shell` with `fossick read-gh-repo` as the first research call for a GitHub repository.
 
 ``` python
 def run_shell(command, cwd='.', timeout=60): ...

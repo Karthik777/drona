@@ -1,0 +1,126 @@
+{
+ "meta": {
+  "name": "notebook-edit",
+  "status": "accepted",
+  "reviewer": "Karthik",
+  "tools": [
+   "notebook_cells",
+   "view_cell",
+   "edit_cell"
+  ],
+  "model": null,
+  "rank": 30
+ },
+ "history": [
+  {
+   "role": "user",
+   "content": [
+    {
+     "type": "text",
+     "text": "In nbs/00_core.ipynb, make threshold return a third instead of a half."
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "A notebook, so address cells by id rather than editing the file as text. List the cells first."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_cells",
+     "name": "notebook_cells",
+     "arguments": {
+      "path": "nbs/00_core.ipynb"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_cells",
+     "name": "notebook_cells",
+     "text": "c3d4e5f6  markdown ## Sizes\na1b2c3d4  code     def threshold(n):\nb2c3d4e5  code     assert threshold(9) == 4"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Cell a1b2c3d4 defines it. View its exact source so `oldText` matches."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_view",
+     "name": "view_cell",
+     "arguments": {
+      "path": "nbs/00_core.ipynb",
+      "cell_id": "a1b2c3d4"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_view",
+     "name": "view_cell",
+     "text": "1: def threshold(n):\n2:     return n // 2"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "One exact replacement in that cell."
+    },
+    {
+     "type": "tool_use",
+     "id": "call_edit",
+     "name": "edit_cell",
+     "arguments": {
+      "path": "nbs/00_core.ipynb",
+      "cell_id": "a1b2c3d4",
+      "edits": [
+       {
+        "oldText": "n // 2",
+        "newText": "n // 3"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "content": [
+    {
+     "type": "tool_result",
+     "id": "call_edit",
+     "name": "edit_cell",
+     "text": "replaced 1 block(s) in cell a1b2c3d4 of nbs/00_core.ipynb\n--- nbs/00_core.ipynb#a1b2c3d4\n+++ nbs/00_core.ipynb#a1b2c3d4\n@@ -1,2 +1,2 @@\n def threshold(n):\n-    return n // 2\n+    return n // 3"
+    }
+   ]
+  },
+  {
+   "role": "assistant",
+   "content": [
+    {
+     "type": "text",
+     "text": "Done: `threshold` in nbs/00_core.ipynb (cell a1b2c3d4) now returns `n // 3`. The assertion in cell b2c3d4e5 (`threshold(9) == 4`) will fail now that 9 // 3 is 3; say so if you want it changed as well."
+    }
+   ]
+  }
+ ]
+}
