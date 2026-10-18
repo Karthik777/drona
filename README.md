@@ -97,6 +97,19 @@ A completion receipt includes the package version and round revision. [`completi
 
 ## Move sessions between hosts
 
+## Improve the learned folder
+
+[`improve_round`](https://Karthik777.github.io/drona/improve.html#improve_round) runs one Harness²-style round on a finished Ramabana session. It replays the session’s request from the commit the session started at, with the current learned folder and with an edited copy, and keeps the copy only when it took a cheaper route and still replied. A route’s cost is its findings, then its failed or refused calls, then its calls. A kept copy is committed in the learned folder’s own git repository, so `git revert` undoes one round. Ramabana writes the starting commit to `<cfg>/runs/<session>/start.json`; a session that began with uncommitted changes is refused.
+
+``` python
+from dhrona.improve import improve_round
+start = json.loads(Path('~/.config/ramabana/runs/agent_.../start.json').expanduser().read_text())[0]
+report = improve_round(prompt, start, '/tmp/round-1', learned=Path('~/.config/ramabana/learned').expanduser(),
+                       model='claude/haiku', editor='claude/sonnet')
+```
+
+Every run, the evidence the editor read, the candidate and `report.json` stay in the work folder. The comparison checks the route, not the answer, so read the candidate’s reply in the report before relying on a kept round.
+
 Aidialog notebooks are the interchange format. Ramabana, Claude, and Codex sessions can all be imported for review in Leela.
 
 ``` sh
