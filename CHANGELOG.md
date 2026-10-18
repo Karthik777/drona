@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.7
+
+- The judge sees each run's refused shell commands under its answer, as what the run would have done with approval. A command the request needed, stated so the person can run it, counts as done. `refused_commands` lists them, and `judge_prompt` builds the prompt.
+- When a round has the person's own session of the request, the judge sees the commands that session ran, failed or declined, with the person's reason, as what the work needed. `ran_commands` lists them. The editor reads the whole session as `original.md`.
+- `trainable` keeps each session's first turn as `turn`, and `improve_batch` passes it to `improve_round(original=)`.
+- Replay clones have no remote, so nothing in a replay can push to the person's repository.
+
 ## 0.1.6
 
 - `dhrona-improve` and `improve_batch` run improvement rounds over past Ramabana sessions in turn. Each round starts from the learned folder the previous one left. `summary.json` holds one row per round, and a failed round is a row with its error. `--models`, `--skip` and `--max-calls` choose the sessions.
