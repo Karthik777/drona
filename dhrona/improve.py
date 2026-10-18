@@ -27,7 +27,8 @@ def replay_clone(start, dest):
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     for cmd in (['git', 'clone', '-q', '--no-hardlinks', start['repo'], str(dest)],   # a replay's edits never reach the source's objects
-                ['git', '-C', str(dest), 'checkout', '-q', '--detach', start['head']]):
+                ['git', '-C', str(dest), 'checkout', '-q', '--detach', start['head']],
+                ['git', '-C', str(dest), 'remote', 'remove', 'origin']):   # a push from a replay has nowhere to go
         if (p := subprocess.run(cmd, capture_output=True, text=True)).returncode:
             raise RuntimeError(f"could not clone {start['repo']} at {start['head']}: {p.stderr.strip()}")
     return dest
