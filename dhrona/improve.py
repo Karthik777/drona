@@ -4,8 +4,9 @@
 
 # %% auto #0
 __all__ = ['RAMABANA', 'LEARNED_MAX', 'MISSION', 'JUDGE', 'replay_clone', 'run_turn', 'route_cost', 'delivered', 'better',
-           'check_learned', 'keep', 'trajectory_md', 'findings_md', 'judge_reply', 'improve_round', 'request_text',
-           'session_start', 'trainable', 'trainable_sessions', 'improve_batch', 'improve_cli']
+           'check_learned', 'keep', 'trajectory_md', 'findings_md', 'refused_commands', 'ran_commands', 'judge_prompt',
+           'judge_reply', 'improve_round', 'request_text', 'session_start', 'trainable', 'trainable_sessions',
+           'improve_batch', 'improve_cli']
 
 # %% ../nbs/04_improve.ipynb #1dd2fce7
 import json, random, re, shutil, subprocess
@@ -154,6 +155,8 @@ Look for a behaviour that repeats across the runs and costs the route something:
 
 The runs were replays with nobody present, so every `run_shell` call was refused for want of an approver. In a real session a person approves or declines each shell command. A lesson must hold in a real session: write nothing about refused approvals, and never steer the agent away from a shell command the work needs. Redirect a shell command only when a dedicated tool does the same job. A finding is a hint, not a verdict; if no dedicated tool does what the shell command did, the finding is wrong.
 
+`original.md`, when it is there, is the person's own session of this request, in which the person approved or declined each shell command. Its results show what a refused command in a replay would have done, and whether the person wanted it. Use it to judge whether a run's refused command was the right action. Never write a lesson that steers the agent away from a command the person approved.
+
 Change only what the evidence shows needs changing.
 - Prefer a skill for a procedure with a recognisable trigger. It costs nothing until it is used.
 - Use `AGENTS.md` only for a short rule that applies to every task. Keep the whole file under {mx} characters, and cut something to pay for what you add.
@@ -169,13 +172,40 @@ JUDGE = r"""A person asked:
 
 {request}
 
-Here are {n} answers to that request from separate runs, labelled in no particular order.
+Here are {n} answers to that request from separate runs, labelled in no particular order. The runs had nobody present to approve shell commands, so each shell command a run asked to run was refused. Those commands are listed under its answer: they are what the run would have done with approval.
 
 {answers}
-
-Does answer {label} answer the request at least as completely and correctly as the best of the other answers? A shorter answer is fine when it is complete. An answer that stops to ask for something another answer found is less complete. Judge only what the answers say, and do not use tools.
+{original}
+Does answer {label} answer the request at least as completely and correctly as the best of the other answers? A shorter answer is fine when it is complete. An answer that stops to ask for something another answer found is less complete. A proposed command counts as part of its answer: one the request needed, stated so the person can run it, counts as done; one the request did not need, or one that would do harm, counts against it. Judge only what is written here, and do not use tools.
 
 Reply with YES or NO on the first line, then one sentence giving the reason."""
+
+def refused_commands(turn):
+    "The shell commands `turn` asked to run and was refused for want of an approver."
+    return [str(tool_args(a).get('command') or '') for a in turn.get('activity') or [] if a.get('tool') == 'run_shell' and denial_reason(a)]
+
+def ran_commands(turn, mx=600):
+    "`(command, outcome, output)` for each shell command `turn` asked for: `ran`, `failed`, or `declined: ` and the person's reason."
+    return [(str(tool_args(a).get('command') or ''), f'declined: {r}' if (r := denial_reason(a)) else 'ran' if a.get('ok') else 'failed',
+             '' if r else str(a.get('detail') or '')[:mx]) for a in turn.get('activity') or [] if a.get('tool') == 'run_shell']
+
+def _commands_md(cmds): return '\n'.join(f'- `{c}`' for c in cmds)
+
+def judge_prompt(request, cand, bases, original=None):
+    "`(prompt, label)`: the judge's prompt over every reply, shuffled by `request`, and the label the candidate's reply has."
+    turns = [*bases, cand]
+    order = list(range(len(turns)))
+    random.Random(request).shuffle(order)
+    labels = [chr(ord('A') + j) for j in range(len(order))]
+    label = labels[order.index(len(turns) - 1)]
+    def answer(j, i):
+        asked = refused_commands(turns[i])
+        return f"## Answer {labels[j]}\n\n{turns[i].get('reply') or ''}" + (f'\n\nCommands it asked to run:\n{_commands_md(asked)}' if asked else '')
+    seen = ran_commands(original) if original else []
+    own = ('\n## Commands in the person\'s own session of this request\n\nThe person approved or declined each one there. They show what the work needed.\n\n'
+           + '\n'.join(f'- `{c}` ({how})' + (f": {' '.join(out.split())}" if out else '') for c, how, out in seen) + '\n') if seen else ''
+    answers = '\n\n'.join(answer(j, i) for j, i in enumerate(order))
+    return JUDGE.format(request=request, n=len(turns), answers=answers, original=own, label=label), label
 
 def _says_yes(text):
     "Whether the first line of a judge's reply answers YES."
@@ -188,17 +218,13 @@ def judge_reply(
     folder,         # a new folder for the judge's run
     model=None,     # the model that judges
     exe=RAMABANA,
+    original=None,  # the person's own turn for this request, whose commands show what the work needed
 ):
     "`(kept, reply)`: whether a blind judge finds `cand`'s reply at least as good as the best of `bases`' replies, and what it said."
-    replies = [b.get('reply') or '' for b in bases] + [cand.get('reply') or '']
-    order = list(range(len(replies)))
-    random.Random(request).shuffle(order)
-    labels = [chr(ord('A') + j) for j in range(len(order))]
-    answers = '\n\n'.join(f'## Answer {labels[j]}\n\n{replies[i]}' for j, i in enumerate(order))
+    prompt, _ = judge_prompt(request, cand, bases, original)
     folder = Path(folder)
     folder.mkdir(parents=True)
-    t = run_turn(JUDGE.format(request=request, n=len(replies), answers=answers, label=labels[order.index(len(replies) - 1)]),
-                 [folder], folder/'cfg', model, exe=exe)
+    t = run_turn(prompt, [folder], folder/'cfg', model, exe=exe)
     if not delivered(t): raise RuntimeError(f"the judge gave no answer: {t.get('error') or t.get('reply') or ''}")
     return _says_yes(t['reply']), t['reply']
 
@@ -220,6 +246,7 @@ def improve_round(
     approve='ask',  # `edits` lets a replay edit files inside its throwaway clone
     exe=RAMABANA,
     read_outside=True, # replays read outside their clone, as a session started with `--read-outside` does
+    original=None,  # the person's own turn for this request; the editor and the judge see what its commands did
 ):
     "One round: `k` base runs, one edited learned folder, one run under it, and the decision; returns the report."
     if k < 1: raise ValueError('a round needs at least one base run')
@@ -244,6 +271,7 @@ def improve_round(
     (ev/'task.md').write_text(prompt)
     for n, b in enumerate(bases, 1): (ev/f'base-{n}.md').write_text(trajectory_md(b))
     (ev/'findings.md').write_text(findings_md(bases))
+    if original: (ev/'original.md').write_text("# The person's own session of this request\n\nA person approved or declined each shell command here.\n\n" + trajectory_md(original))
     shutil.copytree(current, cand, ignore=_HIDDEN)
     try: edit = run_turn(MISSION.format(candidate=cand, evidence=ev, mx=LEARNED_MAX), [cand, ev], work/'editor'/'cfg', editor,
                          approve='edits', exe=exe)
@@ -257,7 +285,7 @@ def improve_round(
         if c is not None:
             report['candidate'] = _summary(c)
             if better(c, bases):   # a cheaper route counts only if the answer is as good
-                try: report['adopted'], report['judge'] = judge_reply(prompt, c, bases, work/'judge', editor, exe)
+                try: report['adopted'], report['judge'] = judge_reply(prompt, c, bases, work/'judge', editor, exe, original)
                 except RuntimeError as e: report['judge_error'] = str(e)
             if report['adopted'] and learned is not None:
                 routes = ', '.join(str(b['route']) for b in report['bases'])
@@ -297,7 +325,7 @@ def session_start(turn, roots=()):
     return dict(repo=repo, head=head, dirty=None, inferred=True) if head else None
 
 def trainable(turns, roots_of=None, max_calls=40):
-    "The first turn of each session that can seed a round, shortest first: `{session, prompt, model, start, route}`."
+    "The first turn of each session that can seed a round, shortest first: `{session, prompt, model, start, route, turn}`."
     first = {}
     for t in turns:
         if t.get('session'): first.setdefault(t['session'], t)
@@ -308,7 +336,7 @@ def trainable(turns, roots_of=None, max_calls=40):
         if not 0 < cost[2] <= max_calls or cost[:2] == (0, 0): continue
         if any(a.get('tool') == 'git_commit' for a in t.get('activity') or []): continue    # `at` is the turn's end, so its start would hold this commit
         if (start := session_start(t, (roots_of or {}).get(sid) or ())) is None: continue
-        found.append(dict(session=sid, prompt=req, model=t.get('model'), start=start, route=cost))
+        found.append(dict(session=sid, prompt=req, model=t.get('model'), start=start, route=cost, turn=t))
     out, seen = [], set()
     for s in sorted(found, key=lambda s: s['route'][2]):
         if s['prompt'] not in seen: seen.add(s['prompt']); out.append(s)
@@ -357,7 +385,8 @@ def improve_batch(
     for s in picked:
         row = dict(session=s['session'], prompt=s['prompt'], model=model or s['model'])
         try:
-            r = improve_round(s['prompt'], s['start'], work/s['session'], learned, row['model'], editor, k, approve, exe, read_outside)
+            r = improve_round(s['prompt'], s['start'], work/s['session'], learned, row['model'], editor, k, approve, exe, read_outside,
+                              original=s.get('turn'))
             row |= dict(adopted=r['adopted'], commit=r.get('commit'), changed=r.get('changed'), problems=r.get('problems'),
                         bases=[b['route'] for b in r['bases']], candidate=(r.get('candidate') or {}).get('route'), judge=r.get('judge'),
                         error=r.get('base_error') or r.get('editor_error') or r.get('candidate_error') or r.get('judge_error') or None)
