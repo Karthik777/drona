@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.1.6
+
+- `dhrona-improve` and `improve_batch` run improvement rounds over past Ramabana sessions in turn. Each round starts from the learned folder the previous one left. `summary.json` holds one row per round, and a failed round is a row with its error. `--models`, `--skip` and `--max-calls` choose the sessions.
+- `trainable_sessions` finds sessions to replay: self-contained first turns whose route cost something, placed in the repository their tool paths touched and replayed from its last commit before the turn.
+- A candidate with a cheaper route is kept only when `judge_reply`, a blind judge over every reply, says its answer is at least as complete as the best base answer.
+- Replays may edit files in their clone with `approve='edits'`, and read outside it by default. Route cost ignores approvals refused because nobody could answer.
+- `bypass_tool` flags a shell command only when every part of it has a dedicated tool. `git show`, `git log` with patches, stats or searches, and `git diff` against refs are not bypasses. Separators inside quotes and heredoc bodies no longer split a command.
+
 ## 0.1.5
 
 - `dhrona.improve.improve_round` runs one improvement round for Ramabana's learned folder. It replays a session's request from the commit the session started at, edits a copy of the folder with an editor model, and keeps the copy only when its run replied and cost less than every base run. A route costs its findings, then its failed or refused calls, then its calls.
