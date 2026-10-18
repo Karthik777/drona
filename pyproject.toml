@@ -25,6 +25,7 @@ dhrona-start = "dhrona.rounds:start_cli"
 dhrona-import = "dhrona.sessions:import_cli"
 dhrona-export = "dhrona.sessions:export_cli"
 dhrona-tools = "dhrona.tools:tools_cli"
+dhrona-improve = "dhrona.improve:improve_cli"
 
 [project.urls]
 Repository = "https://github.com/Karthik777/drona"

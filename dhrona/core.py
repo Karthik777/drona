@@ -63,24 +63,47 @@ def tool_args(action):
 _RESEARCH_TOOLS = {'web_search', 'read_url', 'search_code', 'run_shell'}
 _SCHEMA_ERRS = ('could not parse commands', 'JSONDecodeError', 'JSON decoder')
 SHELL_TOOLS = (
-    (r'git\s+status\b', 'git_status'), (r'git\s+diff\b', 'git_diff'), (r'git\s+(log|show)\b', 'git_log'),
+    (r'git\s+status\b', 'git_status'), (r'git\s+diff(\s+-\S+)*(\s+--(\s+[^\s>]+)*)?(\s+\d*>&?\S+)*$', 'git_diff'), (r'git\s+log\b(?!.*\s(-p|-u|-c|--cc|--raw|--name-status|--numstat|--shortstat|--patch\S*|--stat\S*|-[SGL]\S*)(\s|$))', 'git_log'),
     (r'git\s+commit\b', 'git_commit'), (r'git\s+(checkout|switch)\b', 'git_checkout'), (r'git\s+stash\b', 'git_stash'),
     (r'git\s+(push|pull|fetch)\b', 'git_remote'), (r'(rg|grep|ag)\b', 'grep'), (r'(find|fd)\b', 'ls'), (r'(ls|tree)\b', 'ls'),
-    (r'(sed|perl)\s+-p?i\b', 'replace_text'), (r'(cat\s*>|tee\b)', 'create_file'), (r'sed\s+-n\b|(cat|head|tail|nl)\b', 'view_file'),
+    (r'(sed|perl)\s+-p?i\b', 'replace_text'), (r'(cat\b[^|>]*(?<![\d&])>\s*[^&\s]|tee\b)', 'create_file'), (r'sed\s+-n\b|(cat|head|tail|nl)\b', 'view_file'),
     (r'(curl|wget)\b', 'read_url'))
 _PREFIX = re.compile(r'^(env(\s+-u\s+\S+|\s+\w+=\S+)*\s+|(\w+=\S+\s+)+)')
 _GIT_OPTS = re.compile(r'^git\s+((-[Cc]\s+\S+|--\S+)\s+)+')
 
+_HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_]\w*)\1")
+
+def _split(command):
+    "`command` cut at `&&`, `||`, `;` and newlines outside quotes, with heredoc bodies left out."
+    kept, tag = [], None
+    for line in command.split('\n'):
+        if tag is not None:
+            if line.strip() == tag: tag = None
+            continue
+        kept.append(line)
+        if (m := _HEREDOC.search(line)): tag = m.group(2)
+    command, parts, cur, quote, i = '\n'.join(kept), [], '', None, 0
+    while i < len(command):
+        c = command[i]
+        if c == '\\': cur += command[i:i+2]; i += 2
+        elif quote or c in '\'"': quote = None if c == quote else (quote or c); cur += c; i += 1
+        elif command.startswith(('&&', '||'), i): parts.append(cur); cur = ''; i += 2
+        elif c in ';\n': parts.append(cur); cur = ''; i += 1
+        else: cur += c; i += 1
+    return parts + [cur]
+
 def _segments(command):
-    for s in re.split(r'&&|;|\|\|', command):
+    for s in _split(command):
         s = _GIT_OPTS.sub('git ', _PREFIX.sub('', s.strip()))
         if s and not s.startswith('cd '): yield s.split('|')[0].strip()
 
 def bypass_tool(command, offered=None):
-    "The dedicated tool `command` stands in for, if any."
+    "The dedicated tool `command` stands in for, when every part of it has one; the first part's tool."
     if not command: return None
     if re.search(r'&\s*$', command.strip()) and not command.strip().endswith('&&'): hit = 'run_shell_bg'
-    else: hit = next((t for s in _segments(command) for rx,t in SHELL_TOOLS if re.match(rx, s)), None)
+    else:
+        hits = [next((t for rx,t in SHELL_TOOLS if re.match(rx, s)), None) for s in _segments(command)]
+        hit = hits[0] if hits and all(hits) else None   # a part no tool does needed the shell anyway
     return hit if hit and (offered is None or hit in offered) else None
 
 def _is_fossick_repo(action):

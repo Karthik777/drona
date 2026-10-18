@@ -110,6 +110,12 @@ report = improve_round(prompt, start, '/tmp/round-1', learned=Path('~/.config/ra
 
 Every run, the evidence the editor read, the candidate and `report.json` stay in the work folder. The comparison checks the route, not the answer, so read the candidate’s reply in the report before relying on a kept round.
 
+`dhrona-improve` runs rounds on past sessions in turn. It picks self-contained first turns whose route cost something, places each in the repository its tool paths touched, and replays it from that repository’s last commit before the turn. Each round starts from the learned folder the previous one left. `summary.json` in the batch folder holds one row per round, and a round that fails is a row with its error.
+
+``` sh
+dhrona-improve /tmp/batch-1 /tmp/learned --n 10 --editor claude/sonnet --models claude-opus-5-5,claude/sonnet
+```
+
 Aidialog notebooks are the interchange format. Ramabana, Claude, and Codex sessions can all be imported for review in Leela.
 
 ``` sh
@@ -139,6 +145,7 @@ Claude Code can resume the id printed by the Claude export. Codex export does no
 | `dhrona-start` | Bootstrap and resume Ramabana with an accepted round |
 | `dhrona-import` | Import a Ramabana, Claude or Codex session as a notebook |
 | `dhrona-export` | Export a notebook for Ramabana, Claude or Codex |
+| `dhrona-improve` | Run improvement rounds on past Ramabana sessions |
 
 ## Develop
 
