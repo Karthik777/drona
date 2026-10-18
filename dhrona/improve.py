@@ -4,10 +4,13 @@
 
 # %% auto #0
 __all__ = ['RAMABANA', 'LEARNED_MAX', 'MISSION', 'replay_clone', 'run_turn', 'route_cost', 'delivered', 'better', 'check_learned',
-           'keep', 'trajectory_md', 'findings_md', 'improve_round']
+           'keep', 'trajectory_md', 'findings_md', 'improve_round', 'request_text', 'session_start', 'trainable',
+           'trainable_sessions']
 
 # %% ../nbs/04_improve.ipynb #1dd2fce7
 import json, re, shutil, subprocess
+from collections import Counter
+from datetime import datetime, timezone
 from fastcore.docments import frontmatter
 from fastcore.xtras import Path
 
@@ -22,7 +25,7 @@ def replay_clone(start, dest):
     "A throwaway clone of `start['repo']` checked out at `start['head']`, in `dest`."
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['git', 'clone', '-q', start['repo'], str(dest)], check=True)
+    subprocess.run(['git', 'clone', '-q', '--no-hardlinks', start['repo'], str(dest)], check=True)   # a replay's edits never reach the source's objects
     subprocess.run(['git', '-C', str(dest), 'checkout', '-q', '--detach', start['head']], check=True)
     return dest
 
@@ -152,10 +155,12 @@ def improve_round(
     model=None,     # the model the runs use
     editor=None,    # the model that edits the candidate
     k=2,            # base runs
+    approve='ask',  # `edits` lets a replay edit files inside its throwaway clone
     exe=RAMABANA,
 ):
     "One round: `k` base runs, one edited learned folder, one run under it, and the decision; returns the report."
     if k < 1: raise ValueError('a round needs at least one base run')
+    if approve not in ('ask', 'edits'): raise ValueError(f"approve is 'ask' or 'edits', not {approve!r}: a replay never runs shell commands")
     if start.get('dirty'): raise ValueError(f"{start['repo']} had uncommitted changes when the session began; a replay from {start['head']} would not see them")
     work = Path(work)
     if work.exists(): raise FileExistsError(f'{work} exists; a round writes into a new folder')
@@ -163,7 +168,7 @@ def improve_round(
     if learned is not None and Path(learned).exists(): shutil.copytree(learned, current, ignore=_HIDDEN)
     else: current.mkdir(parents=True)
     if (bad := check_learned(current)): raise ValueError(f'{learned} holds files a learned folder may not: {bad}')
-    def run(name, folder): return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, exe=exe)
+    def run(name, folder): return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, approve, exe=exe)
     bases = [run(f'base-{n}', current) for n in range(1, k+1)]
     ev.mkdir()
     (ev/'task.md').write_text(prompt)
@@ -188,3 +193,66 @@ def improve_round(
                 report['commit'] = keep(cand, learned, msg)
     (work/'report.json').write_text(json.dumps(report, indent=1, default=str))
     return report
+
+# %% ../nbs/04_improve.ipynb #8b2954cb
+def request_text(prompt):
+    "The person's request inside `<user-request>` tags, else the whole prompt."
+    found = re.findall(r'<user-request>\n?(.*?)\n?</user-request>', str(prompt or ''), re.S)
+    return (found[-1] if found else str(prompt or '')).strip()
+
+def _toplevel(path):
+    "The git repository holding the absolute `path`, after `~` expansion, or None."
+    p = Path(path).expanduser()
+    if not p.is_absolute(): return None
+    return next((str(d) for d in [p, *p.parents] if (d/'.git').exists()), None)
+
+def _when(at):
+    "A history row's `at`, an epoch in seconds or an ISO date, as an ISO date git understands; None when unreadable."
+    try: return datetime.fromtimestamp(float(at), timezone.utc).isoformat()
+    except (TypeError, ValueError, OverflowError, OSError): pass
+    try: return datetime.fromisoformat(str(at)).isoformat()
+    except ValueError: return None
+
+def session_start(turn, roots=()):
+    "`{repo, head, dirty, inferred}` for replaying `turn`'s session, or None when nothing places it in a repository."
+    hits = Counter()
+    for a in turn.get('activity') or []:
+        for k in ('path', 'cwd', 'file', 'root'):
+            if (r := _toplevel(str(tool_args(a).get(k) or ''))): hits[r] += 1
+    repo = hits.most_common(1)[0][0] if hits else next((r for r in map(_toplevel, roots) if r), None)
+    if repo is None or (when := _when(turn.get('at'))) is None: return None
+    head = subprocess.run(['git', '-C', repo, 'rev-list', '-1', f'--before={when}', 'HEAD'], capture_output=True, text=True).stdout.strip()
+    return dict(repo=repo, head=head, dirty=None, inferred=True) if head else None
+
+def trainable(turns, roots_of=None, max_calls=40):
+    "The first turn of each session that can seed a round, shortest first: `{session, prompt, model, start, route}`."
+    first = {}
+    for t in turns:
+        if t.get('session'): first.setdefault(t['session'], t)
+    found = []
+    for sid, t in first.items():
+        req, cost = request_text(t.get('prompt')), route_cost(t)
+        if len(req) < 40 or '<attachments>' in str(t.get('prompt')) or t.get('error'): continue   # an attachment is a file only that session had
+        if not 0 < cost[2] <= max_calls or cost[:2] == (0, 0): continue
+        if any(a.get('tool') == 'git_commit' for a in t.get('activity') or []): continue    # `at` is the turn's end, so its start would hold this commit
+        if (start := session_start(t, (roots_of or {}).get(sid) or ())) is None: continue
+        found.append(dict(session=sid, prompt=req, model=t.get('model'), start=start, route=cost))
+    out, seen = [], set()
+    for s in sorted(found, key=lambda s: s['route'][2]):
+        if s['prompt'] not in seen: seen.add(s['prompt']); out.append(s)
+    return out
+
+def trainable_sessions(cfg='~/.config/ramabana', max_calls=40):
+    "`trainable` over Ramabana's history and session index in `cfg`, with each session's own `start.json` where it has a clean one."
+    cfg = Path(cfg).expanduser()
+    idx = cfg/'agent-sessions.json'
+    roots = {s: v.get('roots') for s, v in json.loads(idx.read_text()).get('sessions', {}).items()} if idx.exists() else {}
+    out = []
+    for s in trainable(read_history(cfg/'agent-history.jsonl'), roots, max_calls):
+        p = cfg/'runs'/s['session']/'start.json'
+        rec = next((r for r in (json.loads(p.read_text()) if p.exists() else []) if r.get('repo') == s['start']['repo']), None)
+        if rec is not None:
+            if rec.get('dirty'): continue
+            s['start'] = rec | dict(inferred=False)
+        out.append(s)
+    return out
