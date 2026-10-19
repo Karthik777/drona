@@ -1,4 +1,4 @@
-"""Move reviewed dialogs between Ramabana, Claude Code, and Codex.
+"""Move reviewed dialogs between Ramabana, Claude Code and Codex.
 
 Docs: https://Karthik777.github.io/drona/sessions.html.md"""
 
@@ -30,7 +30,7 @@ def import_session(
     codex_home=None, # optional Codex home
     name=None,       # dialog name
 ):
-    "Import one host session as an Aidialog review notebook."
+    "Import one host's session as an Aidialog review notebook."
     if host not in HOSTS: raise ValueError(f'host must be one of {HOSTS}')
     if host == 'ramabana':
         kwargs = {} if history is None else {'history': history}
@@ -54,7 +54,7 @@ def export_session(
     output=None,     # JSON output for Ramabana or Codex
     cwd=None,        # Claude project directory
 ):
-    "Compile one Dhrona notebook for a target host."
+    "Convert a Dhrona notebook into the form a target host reads."
     if host not in HOSTS: raise ValueError(f'host must be one of {HOSTS}')
     dlg = clean_dialog(source)
     if host == 'claude': return ant.dlg2sess(dlg, cwd=cwd)

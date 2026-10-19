@@ -1,4 +1,4 @@
-"""Assess Ramabana tool routes and build a Urai warm-start history.
+"""Score the tool calls in Ramabana's history, and build a warm start from accepted rounds.
 
 Docs: https://Karthik777.github.io/drona/core.html.md"""
 
@@ -33,7 +33,7 @@ class Finding:
 
 @dataclass(frozen=True)
 class Assessment:
-    "The route score and findings for one or more turns."
+    "The score, call count and findings for one or more turns."
     score: int
     calls: int
     findings: tuple[Finding, ...]
@@ -49,7 +49,7 @@ def read_history(
     path=RAMABANA_HISTORY, # Ramabana `agent-history.jsonl` path
     session=None,         # optional session id
 ):
-    "Read completed Ramabana turns in append order, skipping partial lines."
+    "Read finished Ramabana turns in the order they were written, skipping incomplete lines."
     r = L(Path(path).expanduser().readlines()).map(_loads).filter(lambda x: isinstance(x, dict))
     return r if not session else r.filter(lambda x: x.get('session')==session)
 
@@ -98,7 +98,7 @@ def _segments(command):
         if s and not s.startswith('cd '): yield s.split('|')[0].strip()
 
 def bypass_tool(command, offered=None):
-    "The dedicated tool `command` stands in for, when every part of it has one; the first part's tool."
+    "The dedicated tool that `command` stands in for, or None when some part of it needs the shell."
     if not command: return None
     if re.search(r'&\s*$', command.strip()) and not command.strip().endswith('&&'): hit = 'run_shell_bg'
     else:
@@ -122,7 +122,7 @@ def _failure_key(action): return (action.get('tool', ''), json.dumps(tool_args(a
 _DENIED = 'Denied by human operator'
 
 def denial_reason(action):
-    "The operator's reason if `action` is a refused ask, else `None`."
+    "The reason given for a refused approval, or `None` when `action` is not a refusal."
     if action.get('ok') is not False: return None
     detail = str(action.get('detail') or '')
     if action.get('kind') != 'ask' and not detail.startswith(_DENIED): return None
@@ -147,7 +147,7 @@ def _denial_finding(index, action, denied):
     return retry
 
 def assess_turn(turn, denied=()):
-    "Assess the tool route recorded in one Ramabana turn; `denied` holds calls refused in the previous turn."
+    "Score the tool calls of one Ramabana turn, where `denied` holds calls refused in the previous turn."
     activities, findings, failed, bypassed, denied = turn.get('activity') or [], [], set(), set(), set(denied)
     route_finding = _first_research_finding(turn.get('prompt', ''), activities)
     if route_finding: findings.append(route_finding)
@@ -176,7 +176,7 @@ ROUNDS_DIR = xdg_config_home()/'dhrona/rounds'
 SEEDS_DIR = Path(dhrona.__file__).parent/'seeds'
 
 def call_valid(args, fn):
-    "Would `fn` accept `args` as keyword arguments?"
+    "Whether `fn` accepts `args` as keyword arguments."
     try: inspect.signature(fn).bind(**args); return True
     except (TypeError, ValueError): return False
 
@@ -204,7 +204,7 @@ def misfit(rnd, tools):
     return ''
 
 def round_valid(rnd, tools):
-    "Do all of `rnd`'s calls bind to `tools`? A `None` tool checks the name only."
+    "Whether every call in `rnd` binds to `tools`, where a `None` tool checks only the name."
     return not misfit(rnd, tools)
 
 def load_rounds(dirs=None):
@@ -215,7 +215,7 @@ def load_rounds(dirs=None):
 def _tc(p): return ToolCall(p['name'], p.get('arguments') or {}, **({'id': p['id']} if p.get('id') else {}))
 
 def round_msgs(rnd):
-    "Canonical Urai messages from an accepted round."
+    "The messages of an accepted round in Urai's format."
     res, tcs = [], {}
     for m in rnd['history']:
         parts = m['content']
@@ -239,15 +239,15 @@ def fit_rounds(tools=None, model=None, limit=2, dirs=None):
     return used, skipped
 
 def warm_start(tools=None, model=None, limit=2, dirs=None):
-    "Canonical Urai history from accepted rounds that fit the offered tools, best-ranked and same-model first."
+    "Chat history in Urai's format from the accepted rounds that fit the offered tools, best-ranked and same-model first."
     return [m for r in fit_rounds(tools, model, limit, dirs)[0] for m in round_msgs(r)]
 
 def dhrona_version():
-    "The warm-start revision."
+    "The package version and round revision that a completion receipt records."
     return f'{dhrona.__version__}:{ROUND_REVISION}'
 
 def receipt_path(state=None):
-    "The completion receipt file."
+    "The file that holds completion receipts."
     return Path(state) if state else xdg_state_home()/'dhrona/completions.json'
 
 def register_completion(state=None):
@@ -259,13 +259,13 @@ def register_completion(state=None):
     return cid
 
 def completion_valid(cid, state=None):
-    "Does `cid` name a completion for the current round?"
+    "Whether `cid` names a completion recorded for the current round revision."
     path = receipt_path(state)
     if not cid or not path.exists(): return False
     return (path.read_json().get(cid) or {}).get('version') == dhrona_version()
 
 def prepare_chat(chat, tools=None, model=None):
-    "Prepend the Dhrona warm start to an empty Urai-compatible chat."
+    "Put the warm start into an empty Urai-compatible chat."
     if chat.hist: raise ValueError('Dhrona prepares an empty chat only')
     chat.hist = chat.fmt2hist(warm_start(tools, model))
     if hasattr(chat, '_recreate_conv'): chat._recreate_conv()
@@ -277,7 +277,7 @@ def main(
     history: str=str(RAMABANA_HISTORY), # Ramabana history path
     session: str=None,                  # optional session id
 ):
-    "Assess persisted Ramabana tool routes."
+    "Score the tool routes in a Ramabana history and print them as JSON."
     if not Path(history).expanduser().exists(): sys.exit(f'No history at {history}')
     a = assess_history(read_history(history, session))
     print(json.dumps({'score': a.score, 'calls': a.calls, 'findings': [asdict(f) for f in a.findings]}, indent=2))

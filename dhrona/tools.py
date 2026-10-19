@@ -1,4 +1,4 @@
-"""Measure which tools agents call, how often they fail, and where the shell stands in for a dedicated tool.
+"""Count which tools agents call, how often the calls fail, and when the shell stands in for a dedicated tool.
 
 Docs: https://Karthik777.github.io/drona/tools.html.md"""
 
@@ -38,7 +38,7 @@ def tool_report(
     since=None, # epoch or ISO date lower bound on `at`
     model=None, # restrict to one model name
 ):
-    "Per-tool call, failure and denial counts, shell bypasses, and the same split per model."
+    "Count calls, failures and denials per tool, shell bypasses, and the same split per model."
     since, calls, fails, details, bypass, denials, reasons = _epoch(since), Counter(), Counter(), defaultdict(Counter), Counter(), Counter(), Counter()
     models = defaultdict(lambda: dict(calls=0, shell=0, bypass=0))
     for t in turns:
@@ -60,7 +60,7 @@ def tool_report(
 def _counts(d): return ', '.join(f'{k}={v}' for k,v in d.items())
 
 def fmt_report(r):
-    "`r` as a text table followed by bypass, denial and per-model summary lines."
+    "The report `r` as a text table, followed by lines for bypasses, denials and each model."
     w = max(map(len, r['tools']), default=4)
     rows = [f"{'tool':<{w}}  calls  fail%  top failure"]
     rows += [f"{t:<{w}}  {v['calls']:>5}  {100*v['fail_rate']:>4.0f}%  {v['failures'][0][0] if v['failures'] else ''}" for t,v in r['tools'].items()]

@@ -1,4 +1,4 @@
-"""Capture, review, accept, and start curated tool-use rounds.
+"""Turn a finished Ramabana session into a reviewed example round, and start a session from it.
 
 Docs: https://Karthik777.github.io/drona/rounds.html.md"""
 
@@ -31,7 +31,7 @@ def read_dialog(source):
 def _prompts(dlg): return [m for m in dlg if m.msg_type == sprompt and not m.skipped]
 
 def clean_dialog(source):
-    "Prompt messages from a Dhrona notebook, without review notes."
+    "The prompt messages of a Dhrona notebook, without its review note."
     dlg = read_dialog(source)
     if not (prompts := _prompts(dlg)): raise ValueError('Dialog contains no prompt turns')
     return Dialog(prompts, name=dlg.name, meta=dlg.meta)
@@ -72,7 +72,7 @@ def capture(
     history=RAMABANA_HISTORY, # Ramabana history path
     name=None,              # round name; output stem when omitted
 ):
-    "Capture one persisted Ramabana session as a review notebook."
+    "Save one recorded Ramabana session as a review notebook."
     turns = read_history(history)
     if not turns: raise ValueError('Ramabana history has no completed turns')
     if session == 'latest': session = latest_session(turns)
@@ -91,7 +91,7 @@ def capture(
 
 # %% ../nbs/01_rounds.ipynb #c2ca7765
 def compiled_history(source):
-    "Canonical Aidialog history from an accepted round."
+    "The chat history of an accepted round, in Aidialog's format."
     dlg = clean_dialog(source)
     if (dlg.meta.get(REVIEW_KEY) or {}).get('status') != 'accepted': raise ValueError('Round has not been accepted')
     return dlg2chat(dlg, plain=True)
@@ -102,7 +102,7 @@ def accept(
     output=None,    # compiled JSON path; `<source>.json` when omitted
     install=False,  # also write to the rounds library (`True` for `ROUNDS_DIR`, or a directory)
 ):
-    "Accept a reviewed dialog and write its canonical history."
+    "Accept a reviewed dialog and write its history as JSON."
     if not reviewer.strip(): raise ValueError('reviewer is required')
     dlg = read_dialog(source)
     if not (prompts := _prompts(dlg)): raise ValueError('Round contains no prompt turns')
@@ -120,7 +120,7 @@ def accept(
     return output
 
 def install_round(source, into=True, name=''):
-    "Copy a compiled round into the rounds library (`ROUNDS_DIR`, or the directory `into`) under `name` (default: the round's `meta.name`); returns that path."
+    "Copy a compiled round into `ROUNDS_DIR` or the folder `into`, named `name` or else the round's own name, and return the new path."
     data = Path(source).read_json()
     lib = (ROUNDS_DIR if into is True else Path(into))/f"{name or data['meta'].get('name') or Path(source).stem}.json"
     lib.parent.mkdir(parents=True, exist_ok=True)
@@ -137,7 +137,7 @@ def _history_dicts(history):
 
 # %% ../nbs/01_rounds.ipynb #7df69513
 def bootstrap_prompt(source):
-    "A compact prompt containing one accepted worked round."
+    "One accepted round written out as a single prompt that ends by asking for `DHRONA_READY`."
     history = compiled_history(source)
     rows = ['The following reviewed Dhrona round demonstrates the tool route to follow.']
     for m in history:
@@ -165,7 +165,7 @@ def start_commands(
     return cmd, ['ramabana', '--root', root, '--resume', 'latest']
 
 def start_round(source, root='.', model=None, launch=False):
-    "Prepare or launch Ramabana with an accepted Dhrona round."
+    "Return the commands that start Ramabana with an accepted round, or run them when `launch` is set."
     first, resume = start_commands(source, root, model)
     if not launch: return {'bootstrap': first, 'resume': resume}
     subprocess.run(first, check=True)
