@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.1.9
+
+- `delivered` needs a `state` of `complete`, and `trainable` skips a first turn that did not end complete. A run that was stopped, abandoned or interrupted has no error, so a cut-off replay could count as a cheaper delivered candidate.
+- `trainable_sessions` matches a `start.json` entry on the resolved repository path. Ramabana writes resolved paths, so a root reached through a link used to ignore the entry and its uncommitted changes.
+- An unreadable `start.json` or `agent-sessions.json`, or one that holds the wrong shape, counts as missing. It used to raise and end the whole night.
+- `learned_lock` raises `BatchBusy`, a `RuntimeError`. `nightly` returns a note for it instead of raising, so a beat that takes back a night still running past pobblebonk's 300-second lease leaves no retries and no "gave up" note. Uncommitted changes in the learned folder still raise.
+- `improve_batch` takes `models` as a comma-separated string as well as a list. A string used to match by substring.
+- The docs are in plain sentences, and imports sit in their own cells so the docs build runs.
+
 ## 0.1.8
 
 - `improve_batch` and `dhrona-improve` take a `budget` in dollars. No round starts once the rounds so far have cost that much. A batch can pass its budget by the cost of its last round.

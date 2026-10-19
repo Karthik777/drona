@@ -8,8 +8,8 @@ Docs: https://Karthik777.github.io/drona/improve.html.md"""
 __all__ = ['RAMABANA', 'LEARNED_MAX', 'MISSION', 'JUDGE', 'NIGHTLY', 'replay_clone', 'run_turn', 'route_cost', 'delivered',
            'better', 'check_learned', 'keep', 'trajectory_md', 'findings_md', 'refused_commands', 'ran_commands',
            'judge_prompt', 'judge_reply', 'improve_round', 'request_text', 'session_start', 'trainable',
-           'trainable_sessions', 'round_cost', 'learned_lock', 'improve_batch', 'improve_cli', 'tried_sessions',
-           'nightly']
+           'trainable_sessions', 'round_cost', 'BatchBusy', 'learned_lock', 'improve_batch', 'improve_cli',
+           'tried_sessions', 'nightly']
 
 # %% ../nbs/04_improve.ipynb #1dd2fce7
 import json, os, random, re, shutil, subprocess, sys
@@ -79,8 +79,9 @@ def _usage(turn):
     return u if isinstance(u, dict) else {}
 
 def delivered(turn):
-    "Whether the run took at least one model turn and ended with a reply and no error."
-    return bool((turn.get('reply') or '').strip()) and not turn.get('error') and _usage(turn).get('turns') != 0
+    "Whether the run took at least one model turn and ended complete, with a reply and no error."
+    return (bool((turn.get('reply') or '').strip()) and not turn.get('error') and _usage(turn).get('turns') != 0
+            and turn.get('state', 'complete') == 'complete')   # a stopped, abandoned or interrupted run has no error
 
 def better(cand, bases):
     "Whether `cand` delivered a reply and costs less than every turn in `bases`."
@@ -336,7 +337,7 @@ def trainable(turns, roots_of=None, max_calls=40):
     found = []
     for sid, t in first.items():
         req, cost = request_text(t.get('prompt')), route_cost(t)
-        if len(req) < 40 or '<attachments>' in str(t.get('prompt')) or t.get('error'): continue   # an attachment is a file only that session had
+        if len(req) < 40 or '<attachments>' in str(t.get('prompt')) or t.get('error') or t.get('state', 'complete') != 'complete': continue   # an attachment is a file only that session had
         if not 0 < cost[2] <= max_calls or cost[:2] == (0, 0): continue
         if any(a.get('tool') == 'git_commit' for a in t.get('activity') or []): continue    # `at` is the turn's end, so its start would hold this commit
         if (start := session_start(t, (roots_of or {}).get(sid) or ())) is None: continue
@@ -346,15 +347,24 @@ def trainable(turns, roots_of=None, max_calls=40):
         if s['prompt'] not in seen: seen.add(s['prompt']); out.append(s)
     return out
 
+def _json(p):
+    "The JSON in `p`, or None when it is missing or unreadable: a write a crash cut short."
+    try: return json.loads(Path(p).read_text())
+    except (OSError, ValueError): return None
+
+def _same(a, b):
+    "Whether two paths name one folder; Ramabana writes resolved paths and a tool call's path may go through a link."
+    return bool(a) and bool(b) and Path(a).expanduser().resolve() == Path(b).expanduser().resolve()
+
 def trainable_sessions(cfg='~/.config/ramabana', max_calls=40):
     "`trainable` over Ramabana's history and session index in `cfg`, with each session's own `start.json` where it has a clean one."
     cfg = Path(cfg).expanduser()
-    idx = cfg/'agent-sessions.json'
-    roots = {s: v.get('roots') for s, v in json.loads(idx.read_text()).get('sessions', {}).items()} if idx.exists() else {}
+    idx = _json(cfg/'agent-sessions.json')
+    roots = {s: v.get('roots') for s, v in idx.get('sessions', {}).items()} if isinstance(idx, dict) else {}
     out = []
     for s in trainable(read_history(cfg/'agent-history.jsonl'), roots, max_calls):
-        p = cfg/'runs'/s['session']/'start.json'
-        rec = next((r for r in (json.loads(p.read_text()) if p.exists() else []) if r.get('repo') == s['start']['repo']), None)
+        recs = _json(cfg/'runs'/s['session']/'start.json')
+        rec = next((r for r in recs if isinstance(r, dict) and _same(r.get('repo'), s['start']['repo'])), None) if isinstance(recs, list) else None
         if rec is not None:
             if rec.get('dirty'): continue
             s['start'] = rec | dict(inferred=False)
@@ -366,6 +376,8 @@ def round_cost(work):
     "Dollars the runs in round folder `work` recorded, whether or not the round finished; a run that recorded no turn adds nothing."
     return sum(c for h in Path(work).glob('*/cfg/agent-history.jsonl') if (ts := read_history(h)) and (c := _usage(ts[-1]).get('cost')))
 
+class BatchBusy(RuntimeError): 'Another batch holds the learned folder.'
+
 @contextmanager
 def learned_lock(learned):
     "Hold `learned`'s lock for the block, or raise `RuntimeError` at once when another batch holds it."
@@ -375,7 +387,7 @@ def learned_lock(learned):
         try:
             if os.name == 'nt': import msvcrt; msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
             else: import fcntl; fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError: raise RuntimeError(f'another batch is using {learned}') from None
+        except OSError: raise BatchBusy(f'another batch is using {learned}') from None
         yield
 
 def improve_batch(
@@ -397,6 +409,7 @@ def improve_batch(
     work = Path(work)
     if work.exists(): raise FileExistsError(f'{work} exists; a batch writes into a new folder')
     if approve not in ('ask', 'edits'): raise ValueError(f"approve is 'ask' or 'edits', not {approve!r}: a replay never runs shell commands")
+    if isinstance(models, str): models = [m.strip() for m in models.split(',') if m.strip()]   # a schedule's payload may hold them as text
     with learned_lock(learned) if learned is not None else nullcontext():
         if learned is not None and _uncommitted(learned): raise RuntimeError(f'{learned} has uncommitted changes; commit or discard them before a batch')
         picked = [s for s in (trainable_sessions() if sessions is None else sessions)
@@ -470,9 +483,10 @@ def nightly(fire):
     left = [s for s in trainable_sessions(cfg, fire.get('max_calls', 40)) if s['session'] not in tried]
     if not left: return 'no session left that an earlier night has not tried'
     work = root/datetime.now().strftime('%Y-%m-%d-%H%M%S')
-    rows = improve_batch(work, Path(fire.get('learned', Path(cfg)/'learned')).expanduser(), left, n=fire.get('n', 3), k=fire.get('k', 2),
-                         model=fire.get('model'), editor=fire.get('editor'), models=fire.get('models'), exe=fire.get('exe') or _beside_python(),
-                         budget=fire.budget)
+    try: rows = improve_batch(work, Path(fire.get('learned', Path(cfg)/'learned')).expanduser(), left, n=fire.get('n', 3), k=fire.get('k', 2),
+                              model=fire.get('model'), editor=fire.get('editor'), models=fire.get('models'), exe=fire.get('exe') or _beside_python(),
+                              budget=fire.budget)
+    except BatchBusy as e: return f'a batch started earlier is still running: {e}'   # the beat took back a fire past its lease; raising would retry it
     kept, failed = [r for r in rows if r.get('adopted')], [r for r in rows if r.get('error')]
     head = f"{len(rows)} rounds, {len(kept)} kept, {len(failed)} failed, ${sum(r['cost'] for r in rows):.2f} of ${fire.budget}; see {work}"
     return '\n'.join([head, *(f"kept {r['commit']}: {r['prompt'][:60]}" for r in kept)])
