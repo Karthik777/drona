@@ -2,6 +2,12 @@
 
 <!-- do not remove -->
 
+## 0.1.12
+
+- A compaction's editor turn counts against the nightly `budget`. `compact_learned` returns its `cost`, `compaction.json` records it, the night's total includes it, and the note's compaction line shows it. A compaction that spends the budget leaves no round to run.
+- Accepting a compaction no longer renews the lessons it rewrote. Each rewritten paragraph takes the newest time of the lessons it draws on, matched by shared words, or of all of them when none matches. The commit's `Lesson-times:` trailer (`TIMES`) records it per line, and `expire_learned` reads it through `_blame`, so a paragraph merged from stale lessons expires on their schedule.
+- `compact_learned(onto=ID)` folds in a pending candidate refused for size: it compacts the file that candidate would make, carries the candidate's other files, and names it in an `Includes:` trailer (`INCLUDES`), so accepting the compaction accepts the candidate. Ramabana 0.2.41 uses it for `/learned compact ID`.
+
 ## 0.1.11
 
 - `compact_learned(learned, target, chat, editor, exe)` proposes a shorter learned `AGENTS.md`. git blame splits HEAD's file into the paragraphs Dhrona proposed and the rest. The editor model rewrites only Dhrona's paragraphs: it merges lessons that overlap, drops duplicates and lessons a later one replaced, and keeps fenced blocks whole, aiming at `COMPACT_TARGET`, 1,200 characters, for the whole file. A person's paragraphs reach the editor only as `[kept N]` markers and come back byte for byte. The prompt and the rewrite are scrubbed. A rewrite that drops, moves or edits a marker, drops a fenced block, is no shorter, or passes `LEARNED_MAX` is refused and nothing is committed.
