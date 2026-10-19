@@ -15,7 +15,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ["fastcore>=2.1.16", "aidialog>=0.0.22", "uraiyadal>=0.0.1", "llmsurgery>=0.0.13"]
+dependencies = ["fastcore>=2.1.16", "aidialog>=0.0.22", "uraiyadal>=0.0.1", "llmsurgery>=0.0.13",
+                "shalya>=0.1.14",   # `parse_lesson`, `lesson_text`
+                "rahasya>=0.0.5"]   # `redact`, before the editor and the judge
 
 [project.scripts]
 dhrona = "dhrona.core:main"

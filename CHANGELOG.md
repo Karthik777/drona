@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.10
+
+- A kept candidate waits for review. `keep` commits it on a new `pending/<id>` branch of the learned folder's repository, in a temporary worktree, and leaves the folder's files, which Ramabana reads, alone. Every round of a batch starts from HEAD. A round's report and a batch row name the branch as `pending`; `nightly` and `dhrona-improve` list the pending branches and point at `ramabana-learned list`. `learned_repo` makes the folder a repository the first time, with what it already held as the first commit.
+- Personal details never reach the editor, the judge or the learned folder. `scrub` masks emails, phone numbers, keys and other identifying values with rahasya as numbered labels such as `[EMAIL_1]` (`SCRUB_KINDS`). It runs over every evidence file, the judge's prompt, the editor's notes and commit message, and every file of a candidate before the candidate is run, so what is tested is what is kept. The editor and the judge stay on Ramabana's normal routing. Requires rahasya 0.0.5.
+- The editor reads recent lessons. `recent_lessons(cfg, days)` reads every structured `remember` call in Ramabana's history, vault or memory file alike, through shalya's `parse_lesson`, newest first and scrubbed. `improve_batch(cfg=)` gives them to each round as `lessons.md`, tool defects first, and the mission asks for a skill that works around a tool defect the runs also show. Requires shalya 0.1.14.
+- What Dhrona proposed expires when unused. At the start of a batch with `cfg`, `expire_learned` removes skills nobody read and `AGENTS.md` paragraphs no accepted round renewed in `days` days (default 30, the schedule's `expire_days`), and commits the removal. Only commits Dhrona proposed expire, a fenced block is never split, and nothing expires when nobody worked in that time. A night with no session left still expires.
+
 ## 0.1.9
 
 - `delivered` needs a `state` of `complete`, and `trainable` skips a first turn that did not end complete. A run that was stopped, abandoned or interrupted has no error, so a cut-off replay could count as a cheaper delivered candidate.
