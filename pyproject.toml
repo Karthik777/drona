@@ -34,6 +34,9 @@ Documentation = "https://Karthik777.github.io/drona/"
 [project.entry-points.nbdev]
 dhrona = "dhrona._modidx:d"
 
+[project.entry-points."ramabana.ticks"]
+dhrona = "dhrona.improve:nightly"
+
 [tool.hatch.build.targets.wheel]
 packages = ["dhrona"]
 
