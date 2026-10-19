@@ -2,6 +2,12 @@
 
 <!-- do not remove -->
 
+## 0.1.11
+
+- `compact_learned(learned, target, chat, editor, exe)` proposes a shorter learned `AGENTS.md`. git blame splits HEAD's file into the paragraphs Dhrona proposed and the rest. The editor model rewrites only Dhrona's paragraphs: it merges lessons that overlap, drops duplicates and lessons a later one replaced, and keeps fenced blocks whole, aiming at `COMPACT_TARGET`, 1,200 characters, for the whole file. A person's paragraphs reach the editor only as `[kept N]` markers and come back byte for byte. The prompt and the rewrite are scrubbed. A rewrite that drops, moves or edits a marker, drops a fenced block, is no shorter, or passes `LEARNED_MAX` is refused and nothing is committed.
+- A compaction waits on a `pending/` branch with the message `Compact learned AGENTS.md (N → M characters)`, so `ramabana-learned` reviews it. What it wrote counts as Dhrona's own and expires as a lesson does. `compact_learned` takes `learned_lock` and returns `{ok, pending, before, after}` or `{ok: False, error}`. It refuses while a batch runs, with uncommitted changes, with no paragraph Dhrona proposed, and while a compaction is already pending.
+- A night proposes a compaction after expiry and before the rounds when `AGENTS.md` is over the schedule's `compact_at` of `LEARNED_MAX`, 0.8 by default, and its note says `compaction pending <branch>`. It tries one compaction per HEAD, so a rejected one is not proposed again until HEAD moves. `improve_batch(compact_at=)` does the same and writes `compaction.json`.
+
 ## 0.1.10
 
 - A kept candidate waits for review. `keep` commits it on a new `pending/<id>` branch of the learned folder's repository, in a temporary worktree, and leaves the folder's files, which Ramabana reads, alone. Every round of a batch starts from HEAD. A round's report and a batch row name the branch as `pending`; `nightly` and `dhrona-improve` list the pending branches and point at `ramabana-learned list`. `learned_repo` makes the folder a repository the first time, with what it already held as the first commit.
