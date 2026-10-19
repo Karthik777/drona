@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.8
+
+- `improve_batch` and `dhrona-improve` take a `budget` in dollars. No round starts once the rounds so far have cost that much. A batch can pass its budget by the cost of its last round.
+- Each batch row's `cost` is the dollars every run in the round's folder recorded, whether or not the round finished (`round_cost`). `dhrona-improve` prints the batch's total.
+- A batch with a learned folder holds `learned_lock` for its whole run. A second batch on the same folder raises `RuntimeError` before it creates anything.
+- `nightly` runs one scheduled batch over the sessions no earlier night started a round on (`tried_sessions`), within the schedule's `budget`. A fire without a positive budget raises `ValueError`. Dhrona registers `nightly` with `ramabana-tick` through the `ramabana.ticks` entry point `dhrona`.
+
 ## 0.1.7
 
 - The judge sees each run's refused shell commands under its answer, as what the run would have done with approval. A command the request needed, stated so the person can run it, counts as done. `refused_commands` lists them, and `judge_prompt` builds the prompt.
