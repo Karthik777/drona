@@ -152,7 +152,7 @@ def learned_repo(learned):
     _git(learned, 'worktree', 'prune')   # a worktree a crashed round left
     return learned
 
-def keep(candidate, learned, message):
+def keep(candidate, learned, message, scrubbed=True):
     "Commit `candidate`'s files on a new `pending/<id>` branch off `learned`'s HEAD, leaving its working tree alone; returns the branch."
     learned = learned_repo(learned)
     branch = PENDING + datetime.now().strftime('%Y%m%d-%H%M%S-') + os.urandom(3).hex()
@@ -162,7 +162,7 @@ def keep(candidate, learned, message):
         for p in wt.iterdir():
             if not p.name.startswith('.'): shutil.rmtree(p) if p.is_dir() else p.unlink()
         shutil.copytree(candidate, wt, dirs_exist_ok=True, ignore=_HIDDEN)
-        _git(wt, 'add', '-A'); _git(wt, *_AS_DHRONA, 'commit', '-q', '--allow-empty', '-m', scrub(message))
+        _git(wt, 'add', '-A'); _git(wt, *_AS_DHRONA, 'commit', '-q', '--allow-empty', '-m', scrub(message) if scrubbed else message)   # `scrub` reads some pending ids as card numbers
     finally: subprocess.run(['git', '-C', str(learned), 'worktree', 'remove', '--force', str(wt)], capture_output=True)
     return branch
 
@@ -721,7 +721,7 @@ def _compact(learned, target, chat, onto=None):
     with tempfile.TemporaryDirectory() as d:
         tarfile.open(fileobj=io.BytesIO(subprocess.run(['git', '-C', str(learned), 'archive', rev], capture_output=True, check=True).stdout)).extractall(cand := Path(d)/'cand', filter='data')
         (cand/'AGENTS.md').write_text(text)
-        branch = keep(cand, learned, msg)
+        branch = keep(cand, learned, msg, scrubbed=False)   # ids, counts and times: nothing personal
     return dict(ok=True, pending=branch, before=len(before), after=len(text), cost=getattr(chat, 'cost', 0))
 
 def compact_learned(

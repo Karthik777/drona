@@ -2,6 +2,10 @@
 
 <!-- do not remove -->
 
+## 0.1.13
+
+- A compaction's commit message is no longer scrubbed. It holds only ids, counts and times, and `scrub` read about one pending id in ten as a card number, which broke the `Includes:` trailer and so the candidate a compaction folded in. `keep(scrubbed=False)` commits a message as given.
+
 ## 0.1.12
 
 - A compaction's editor turn counts against the nightly `budget`. `compact_learned` returns its `cost`, `compaction.json` records it, the night's total includes it, and the note's compaction line shows it. A compaction that spends the budget leaves no round to run.
