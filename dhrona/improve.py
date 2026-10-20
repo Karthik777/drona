@@ -6,12 +6,12 @@ Docs: https://Karthik777.github.io/drona/improve.html.md"""
 
 # %% auto #0
 __all__ = ['RAMABANA', 'LEARNED_MAX', 'SCRUB_KINDS', 'PENDING', 'LESSON', 'COMPACT', 'MISSION', 'JUDGE', 'TIMES', 'INCLUDES',
-           'COMPACT_TARGET', 'COMPACTION', 'NIGHTLY', 'scrub', 'replay_clone', 'run_turn', 'route_cost', 'delivered',
-           'better', 'check_learned', 'learned_repo', 'keep', 'trajectory_md', 'findings_md', 'recent_lessons',
-           'lessons_md', 'refused_commands', 'ran_commands', 'judge_prompt', 'judge_reply', 'improve_round',
-           'request_text', 'session_start', 'trainable', 'trainable_sessions', 'round_cost', 'BatchBusy',
-           'learned_lock', 'improve_batch', 'improve_cli', 'expire_learned', 'compaction_prompt', 'compacted',
-           'compact_learned', 'tried_sessions', 'nightly']
+           'COMPACT_TARGET', 'COMPACTION', 'NIGHTLY', 'FAILED', 'FAILED_TRIES', 'scrub', 'replay_clone', 'run_turn',
+           'route_cost', 'delivered', 'better', 'check_learned', 'learned_repo', 'keep', 'trajectory_md', 'findings_md',
+           'recent_lessons', 'lessons_md', 'refused_commands', 'ran_commands', 'judge_prompt', 'judge_reply',
+           'improve_round', 'request_text', 'session_start', 'trainable', 'trainable_sessions', 'round_cost',
+           'BatchBusy', 'learned_lock', 'improve_batch', 'improve_cli', 'expire_learned', 'compaction_prompt',
+           'compacted', 'compact_learned', 'tried_sessions', 'NightFailed', 'night_error', 'nightly']
 
 # %% ../nbs/04_improve.ipynb #1dd2fce7
 import hashlib, io, json, os, random, re, shutil, subprocess, sys, tarfile, tempfile, time
@@ -56,6 +56,11 @@ def replay_clone(start, dest):
             raise RuntimeError(f"could not clone {start['repo']} at {start['head']}: {p.stderr.strip()}")
     return dest
 
+def _kill_tree(p):
+    "Kill process `p` and, off Windows, every process in its session: a `claude` or `git` it started too."
+    try: os.killpg(p.pid, 9) if os.name != 'nt' else p.kill()
+    except (ProcessLookupError, PermissionError): pass
+
 def run_turn(
     prompt,          # the request
     roots,           # folders the turn may work in
@@ -74,9 +79,13 @@ def run_turn(
     cmd = [exe, '--root', ','.join(map(str, roots)), '--cfg', str(cfg), '--approve', approve,
            '--no-web', '--tmux', 'off', '--pane', 'off', *(['--read-outside'] if read_outside else []),
            *(['--model', model] if model else []), prompt]
-    try: p = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired: raise RuntimeError(f'the run in {cfg} was still going after {timeout}s')
-    (cfg/'run.log').write_text(f'exit {p.returncode}\n\n{p.stderr}')
+    with subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=os.name != 'nt') as p:
+        try: _, err = p.communicate(timeout=timeout)
+        except BaseException as e:   # a beat's own deadline as well as ours: what the run started dies with it
+            _kill_tree(p); p.communicate()
+            if isinstance(e, subprocess.TimeoutExpired): raise RuntimeError(f'the run in {cfg} was still going after {timeout}s') from None
+            raise
+    (cfg/'run.log').write_text(f'exit {p.returncode}\n\n{err}')
     hist = cfg/'agent-history.jsonl'
     if not hist.exists() or not (turns := read_history(hist)): raise RuntimeError(f'no turn was recorded; see {cfg/"run.log"}')
     return turns[-1]
@@ -329,6 +338,7 @@ def improve_round(
     read_outside=True, # replays read outside their clone, as a session started with `--read-outside` does
     original=None,  # the person's own turn for this request; the editor and the judge see what its commands did
     lessons=(),     # `recent_lessons` rows the editor reads as evidence
+    timeout=1800,   # seconds before a replay, base or candidate, is abandoned
 ):
     "Run one round of `k` base runs, one edit to the learned folder, one run under the edit and the decision, and return the report."
     if k < 1: raise ValueError('a round needs at least one base run')
@@ -341,7 +351,7 @@ def improve_round(
     else: current.mkdir(parents=True)
     if (bad := check_learned(current)): raise ValueError(f'{learned} holds files a learned folder may not: {bad}')
     def run(name, folder): return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, approve, exe=exe,
-                                           read_outside=read_outside)
+                                           timeout=timeout, read_outside=read_outside)
     bases = [run(f'base-{n}', current) for n in range(1, k+1)]
     report = dict(prompt=prompt, start=start, bases=[_summary(b) for b in bases], adopted=False)
     if (dead := [n for n, b in enumerate(bases, 1) if not delivered(b)]):
@@ -486,6 +496,7 @@ def improve_batch(
     cfg=None,          # Ramabana's config folder: its history gives the lessons and what was used; None reads neither
     days=30,           # lessons from this many days; what Dhrona proposed and nothing used in them expires
     compact_at=None,   # a fraction of `LEARNED_MAX`: past it, a compaction of `AGENTS.md` is proposed before the rounds
+    timeout=1800,      # seconds before a replay is abandoned
 ):
     "Run `improve_round` on up to `n` sessions in turn; returns one row per round, also written to `work/summary.json`."
     work = Path(work)
@@ -509,7 +520,7 @@ def improve_batch(
             row = dict(session=s['session'], prompt=s['prompt'], model=model or s['model'])
             try:
                 r = improve_round(s['prompt'], s['start'], work/s['session'], learned, row['model'], editor, k, approve, exe, read_outside,
-                                  original=s.get('turn'), lessons=lessons)
+                                  original=s.get('turn'), lessons=lessons, timeout=timeout)
                 row |= dict(adopted=r['adopted'], pending=r.get('pending'), changed=r.get('changed'), problems=r.get('problems'),
                             bases=[b['route'] for b in r['bases']], candidate=(r.get('candidate') or {}).get('route'), judge=r.get('judge'),
                             error=r.get('base_error') or r.get('editor_error') or r.get('candidate_error') or r.get('judge_error') or None)
@@ -536,10 +547,11 @@ def improve_cli(
     exe:str=RAMABANA,               # the Ramabana command a round runs
     read_outside:bool=True,         # --no-read-outside keeps replays' reads inside their clone
     budget:float=None,              # dollars: no round starts once the batch has cost this much
+    timeout:int=1800,               # seconds before a replay is abandoned
 ):
     "Run up to `n` improvement rounds on past Ramabana sessions and print one line per round, then what they cost."
     rows = improve_batch(work, learned, trainable_sessions(cfg, max_calls), n, model, editor, [m for m in models.split(',') if m] or None,
-                         [s for s in skip.split(',') if s], k, approve, exe, read_outside, budget, cfg)
+                         [s for s in skip.split(',') if s], k, approve, exe, read_outside, budget, cfg, timeout=timeout)
     if not rows: print('no session matched')
     for r in rows:
         if r.get('error'): out = r['error']
@@ -755,13 +767,36 @@ def _compaction_note(c):
 # %% ../nbs/04_improve.ipynb #95987ee7
 NIGHTLY = '~/.cache/dhrona/nightly'   #: where scheduled batches write, one folder a night
 
+FAILED = 'night-failed'   #: the marker a night where nothing could run leaves in its batch folder
+FAILED_TRIES = 2          #: such nights a session sits in before it counts as tried
+
 def tried_sessions(root):
-    "Session ids that the batches under `root` have already started a round on."
-    return {p.name for p in Path(root).expanduser().glob('*/*') if p.is_dir()}
+    "Session ids that the batches under `root` have already started a round on; a night where nothing could run counts after `FAILED_TRIES`."
+    dirs = [p for p in Path(root).expanduser().glob('*/*') if p.is_dir()]
+    lost = Counter(p.name for p in dirs if (p.parent/FAILED).exists())
+    return {p.name for p in dirs if not (p.parent/FAILED).exists() or lost[p.name] >= FAILED_TRIES}
+
+class NightFailed(RuntimeError): "Every round of a night failed and nothing was spent, so the beat retries the fire."
+
+_PICK = re.compile(r"(\S+) runs here; choose it with `/model \S+` or the model picker")
+_TURN = re.compile(r"turn job: (\S+) cannot run here")
+_LOGIN = re.compile(r'not logged in|invalid api key|please run /login|keychain', re.I)
+
+def night_error(row):
+    "The first line of a failed round's error, naming the schedule key a night reads where Ramabana says `/model`, and what to do about a lost Claude login."
+    err = next(iter(str(row.get('error') or '').strip().splitlines()), '')[:400]
+    key = 'model' if (m := _TURN.search(err)) and m[1] == row.get('model') else 'editor'
+    err = _PICK.sub(lambda m: f"{m[1]} runs here; set the schedule's `{key}`: pob().update('dhrona', {key}='{m[1]}')", err)
+    if _LOGIN.search(err): err += ('. Claude Code could not use its login from the beat: run `claude /login` in a terminal, or put ANTHROPIC_API_KEY'
+                                   ' in ~/.config/ramabana/beat.env, which bills the API instead of the subscription')
+    return err
 
 def nightly(fire):
     "One scheduled batch over sessions no earlier night tried, within `fire.budget` dollars; returns the note the beat leaves."
     if not (fire.get('budget') or 0) > 0: raise ValueError('the dhrona schedule needs a positive `budget` in dollars')
+    try: timeout = 1800.0 if fire.get('timeout') is None else float(fire['timeout'])   # a payload may hold the number as text
+    except (TypeError, ValueError): timeout = 0
+    if not timeout > 0: raise ValueError(f"the dhrona schedule's `timeout` must be a positive number of seconds, not {fire['timeout']!r}")
     cfg, root = fire.get('cfg', '~/.config/ramabana'), Path(fire.get('work', NIGHTLY)).expanduser()
     tried = tried_sessions(root)
     left = [s for s in trainable_sessions(cfg, fire.get('max_calls', 40)) if s['session'] not in tried]
@@ -776,11 +811,15 @@ def nightly(fire):
     work = root/datetime.now().strftime('%Y-%m-%d-%H%M%S')
     try: rows = improve_batch(work, learned, left, n=fire.get('n', 3), k=fire.get('k', 2),
                               model=fire.get('model'), editor=fire.get('editor'), models=fire.get('models'), exe=exe,
-                              budget=fire.budget, cfg=cfg, days=days, compact_at=at)
+                              budget=fire.budget, cfg=cfg, days=days, compact_at=at, timeout=timeout)
     except BatchBusy as e: return f'a batch started earlier is still running: {e}'   # the beat took back a fire past its lease; raising would retry it
     kept, failed = [r for r in rows if r.get('adopted')], [r for r in rows if r.get('error')]
     gone, c = _json(work/'expired.json') or [], _json(work/'compaction.json')
     spent = sum(r['cost'] for r in rows) + ((c or {}).get('cost') or 0)
     head = f"{len(rows)} rounds, {len(kept)} pending review, {len(failed)} failed, ${spent:.2f} of ${fire.budget}; see {work}"
-    return '\n'.join([head, *(f"pending {r['pending']}: {r['prompt'][:60]}" for r in kept), *(f'expired {g}' for g in gone), *_compaction_note(c),
-                      *(['review with: ramabana-learned list'] if kept or (c and c['ok']) else [])])
+    note = '\n'.join([head, *(f"pending {r['pending']}: {r['prompt'][:60]}" for r in kept), *(f"failed {r['session']}: {night_error(r)}" for r in failed),
+                       *(f'expired {g}' for g in gone), *_compaction_note(c), *(['review with: ramabana-learned list'] if kept or (c and c['ok']) else [])])
+    if rows and len(failed) == len(rows) and not spent:
+        (work/FAILED).write_text(note)
+        raise NightFailed(note)
+    return note

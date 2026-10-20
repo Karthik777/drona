@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.14
+
+- A night where every round failed and nothing was spent raises `NightFailed` with its note, so the beat retries it, and leaves a `night-failed` marker; `tried_sessions` passes over a session only after `FAILED_TRIES` (2) such nights, so the retry replays the same sessions. The documented schedule is `retries=2, retry_after='1h'` (pobblebonk 0.0.5).
+- The nightly note lists each failed round's first error line (`night_error`). Ramabana's `/model NAME` advice becomes the schedule key to set, `model` or `editor`, and a Claude Code login failure says to run `claude /login` or use Ramabana's `beat.env`.
+- `run_turn` starts the replay in its own process session and kills the whole group on a timeout or any interruption, so a `claude` or `git` the replay started does not outlive it.
+- The `dhrona` schedule's payload takes `timeout`, the seconds before a replay, base or candidate, is abandoned, 1,800 by default. `improve_round`, `improve_batch` and `dhrona-improve --timeout` take it too. A replay on a local model that hangs then costs at most that long, and the round's batch row carries `the run in ... was still going after Ns`. `nightly` accepts the number as text, and raises `ValueError` before any round for a `timeout` that is not a positive number.
+
 ## 0.1.13
 
 - A compaction's commit message is no longer scrubbed. It holds only ids, counts and times, and `scrub` read about one pending id in ten as a card number, which broke the `Includes:` trailer and so the candidate a compaction folded in. `keep(scrubbed=False)` commits a message as given.
