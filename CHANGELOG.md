@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.1.15
+
+- `read_history` gives back tool results whole. Since Ramabana 0.2.59 a result over 600 characters is stored in `<cfg>/<log>-details/<session>.jsonl` and the history row keeps only its first 600 characters, so assessments, tool reports, rounds and the nightly batch saw clipped results. It now reads them through Ramabana's `hydrate_turns`, and requires ramabana 0.2.60. Older rows, with their results inline, read as before. Whole results also reach a round's warm-start messages and `tool_report`'s failure keys.
+- The git commands behind replays and the learned folder get `/dev/null` as stdin, so they never read the caller's terminal.
+
 ## 0.1.14
 
 - A night where every round failed and nothing was spent raises `NightFailed` with its note, so the beat retries it, and leaves a `night-failed` marker; `tried_sessions` passes over a session only after `FAILED_TRIES` (2) such nights, so the retry replays the same sessions. The documented schedule is `retries=2, retry_after='1h'` (pobblebonk 0.0.5).

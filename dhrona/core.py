@@ -49,9 +49,11 @@ def read_history(
     path=RAMABANA_HISTORY, # Ramabana `agent-history.jsonl` path
     session=None,         # optional session id
 ):
-    "Read finished Ramabana turns in the order they were written, skipping incomplete lines."
-    r = L(Path(path).expanduser().readlines()).map(_loads).filter(lambda x: isinstance(x, dict))
-    return r if not session else r.filter(lambda x: x.get('session')==session)
+    "Read finished Ramabana turns in the order they were written, skipping incomplete lines, with long tool results whole."
+    from ramabana.agent import hydrate_turns
+    p = Path(path).expanduser()
+    r = L(p.readlines()).map(_loads).filter(lambda x: isinstance(x, dict))
+    return hydrate_turns(p.parent, r if not session else r.filter(lambda x: x.get('session')==session))
 
 def tool_args(action):
     "The call arguments of `action` as a dict."

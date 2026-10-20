@@ -52,7 +52,7 @@ def replay_clone(start, dest):
     for cmd in (['git', 'clone', '-q', '--no-hardlinks', start['repo'], str(dest)],   # a replay's edits never reach the source's objects
                 ['git', '-C', str(dest), 'checkout', '-q', '--detach', start['head']],
                 ['git', '-C', str(dest), 'remote', 'remove', 'origin']):   # a push from a replay has nowhere to go
-        if (p := subprocess.run(cmd, capture_output=True, text=True)).returncode:
+        if (p := subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True)).returncode:
             raise RuntimeError(f"could not clone {start['repo']} at {start['head']}: {p.stderr.strip()}")
     return dest
 
@@ -138,7 +138,7 @@ def _uncommitted(learned):
     "Whether the learned folder's own repository has uncommitted changes."
     learned = Path(learned)
     if not (learned/'.git').exists(): return False
-    return bool(subprocess.run(['git', '-C', str(learned), 'status', '--porcelain'], capture_output=True, text=True).stdout.strip())
+    return bool(subprocess.run(['git', '-C', str(learned), 'status', '--porcelain'], stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout.strip())
 
 PENDING = 'pending/'   #: the branch prefix a kept candidate waits under until a person accepts it into HEAD
 LESSON = 'Lesson from a replay'   #: how the message of a commit Dhrona proposed begins; only those lines and skills expire
@@ -148,7 +148,7 @@ def _is_dhronas(subj): return subj.startswith((LESSON, COMPACT))
 
 _AS_DHRONA = ('-c', 'user.name=Dhrona', '-c', 'user.email=dhrona@localhost')
 
-def _git(d, *a): return subprocess.run(['git', '-C', str(d), *a], check=True, capture_output=True, text=True).stdout.strip()
+def _git(d, *a): return subprocess.run(['git', '-C', str(d), *a], check=True, stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout.strip()
 
 def learned_repo(learned):
     "`learned` as its own git repository with a first commit holding what it already had; refuses uncommitted changes."
@@ -172,7 +172,7 @@ def keep(candidate, learned, message, scrubbed=True):
             if not p.name.startswith('.'): shutil.rmtree(p) if p.is_dir() else p.unlink()
         shutil.copytree(candidate, wt, dirs_exist_ok=True, ignore=_HIDDEN)
         _git(wt, 'add', '-A'); _git(wt, *_AS_DHRONA, 'commit', '-q', '--allow-empty', '-m', scrub(message) if scrubbed else message)   # `scrub` reads some pending ids as card numbers
-    finally: subprocess.run(['git', '-C', str(learned), 'worktree', 'remove', '--force', str(wt)], capture_output=True)
+    finally: subprocess.run(['git', '-C', str(learned), 'worktree', 'remove', '--force', str(wt)], stdin=subprocess.DEVNULL, capture_output=True)
     return branch
 
 def _scrub_folder(folder):
@@ -415,7 +415,7 @@ def session_start(turn, roots=()):
             if (r := _toplevel(str(tool_args(a).get(k) or ''))): hits[r] += 1
     repo = hits.most_common(1)[0][0] if hits else next((r for r in map(_toplevel, roots) if r), None)
     if repo is None or (when := _when(turn.get('at'))) is None: return None
-    head = subprocess.run(['git', '-C', repo, 'rev-list', '-1', f'--before={when}', 'HEAD'], capture_output=True, text=True).stdout.strip()
+    head = subprocess.run(['git', '-C', repo, 'rev-list', '-1', f'--before={when}', 'HEAD'], stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout.strip()
     return dict(repo=repo, head=head, dirty=None, inferred=True) if head else None
 
 def trainable(turns, roots_of=None, max_calls=40):
@@ -653,7 +653,7 @@ def _beside_python():
     "The `ramabana` installed beside this interpreter, else the name for `PATH` to find."
     return shutil.which(RAMABANA, path=str(Path(sys.executable).parent)) or RAMABANA
 
-def _show(learned, rev, rel='AGENTS.md'): return subprocess.run(['git', '-C', str(learned), 'show', f'{rev}:{rel}'], capture_output=True, text=True).stdout
+def _show(learned, rev, rel='AGENTS.md'): return subprocess.run(['git', '-C', str(learned), 'show', f'{rev}:{rel}'], stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout
 
 def _paragraphs(learned, rev='HEAD'):
     "`AGENTS.md` at `rev` as `(text, Dhrona's, time)` per paragraph: Dhrona's when each line came from a commit Dhrona proposed; `time` its newest line's."
@@ -715,7 +715,7 @@ def _compact(learned, target, chat, onto=None):
     "`compact_learned` with the lock already held."
     learned, rev = Path(learned), PENDING + onto if onto else 'HEAD'
     if not (learned/'.git').exists(): return dict(ok=False, error=f'{learned} has no committed AGENTS.md to compact')
-    if onto and subprocess.run(['git', '-C', str(learned), 'rev-parse', '--verify', '-q', f'refs/heads/{rev}'], capture_output=True).returncode:
+    if onto and subprocess.run(['git', '-C', str(learned), 'rev-parse', '--verify', '-q', f'refs/heads/{rev}'], stdin=subprocess.DEVNULL, capture_output=True).returncode:
         return dict(ok=False, error=f'nothing is pending as {onto}')
     if not _git(learned, 'ls-tree', '--name-only', rev, 'AGENTS.md'): return dict(ok=False, error=f'{learned} has no committed AGENTS.md to compact')
     if _uncommitted(learned): return dict(ok=False, error=f'{learned} has uncommitted changes; commit or discard them first')
@@ -731,7 +731,7 @@ def _compact(learned, target, chat, onto=None):
     msg = (f"{COMPACT}{f' with {onto}' if onto else ''} ({len(before):,} → {len(text):,} characters)\n\n"
            + (f'{INCLUDES}{onto}\n' if onto else '') + TIMES + json.dumps(times, separators=(',', ':')))
     with tempfile.TemporaryDirectory() as d:
-        tarfile.open(fileobj=io.BytesIO(subprocess.run(['git', '-C', str(learned), 'archive', rev], capture_output=True, check=True).stdout)).extractall(cand := Path(d)/'cand', filter='data')
+        tarfile.open(fileobj=io.BytesIO(subprocess.run(['git', '-C', str(learned), 'archive', rev], stdin=subprocess.DEVNULL, capture_output=True, check=True).stdout)).extractall(cand := Path(d)/'cand', filter='data')
         (cand/'AGENTS.md').write_text(text)
         branch = keep(cand, learned, msg, scrubbed=False)   # ids, counts and times: nothing personal
     return dict(ok=True, pending=branch, before=len(before), after=len(text), cost=getattr(chat, 'cost', 0))
