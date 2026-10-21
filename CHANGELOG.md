@@ -2,6 +2,10 @@
 
 <!-- do not remove -->
 
+## 0.1.16
+
+- The nightly note and `dhrona-improve` end with `REVIEW`: "review with: /learned in Ramabana, or ramabana-learned in a shell". They said `ramabana-learned list`, which fails: the command takes its subcommand as `--cmd`, and lists when given none.
+
 ## 0.1.15
 
 - `read_history` gives back tool results whole. Since Ramabana 0.2.59 a result over 600 characters is stored in `<cfg>/<log>-details/<session>.jsonl` and the history row keeps only its first 600 characters, so assessments, tool reports, rounds and the nightly batch saw clipped results. It now reads them through Ramabana's `hydrate_turns`, and requires ramabana 0.2.60. Older rows, with their results inline, read as before. Whole results also reach a round's warm-start messages and `tool_report`'s failure keys.
