@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.1.17
+
+- An untracked hidden path in the learned folder, such as a `.kosha/` code index, no longer stops a batch, and `learned_repo` excludes `.kosha/` in new repos. A modified tracked file still does.
+- A refused night is visible: `improve_batch` makes the night's folder before its checks, writes `night-failed` and a `summary.json` holding the error, and `nightly` returns `night refused: ...` instead of raising.
+- `history_health(cfg, days=14)` reads the history in one streaming pass: log size, rows and bytes per day, the largest row, tool-error groups with counts against the previous window (each a defect, habit or noise), guard refusals, back-to-back repeats and sub-agent results without a `state:` line.
+- `health_findings` adds beat lines when the log passes `LOG_MAX_MB` (200) or grows over `LOG_GROWTH_MB` (20) a day, a row passes `ROW_MAX_MB` (5), or a defect group passes `DEFECT_MAX` (20) in 14 days or doubles. `issue_drafts` writes `issues/<slug>.md` for each defect over threshold, and `lesson_candidates` writes habit groups to `lessons-candidates.md` in the night's folder.
+- `improve_round` stops a round whose recorded cost passes `limit` (`ROUND_LIMIT`, $8).
+
 ## 0.1.16
 
 - The nightly note and `dhrona-improve` end with `REVIEW`: "review with: /learned in Ramabana, or ramabana-learned in a shell". They said `ramabana-learned list`, which fails: the command takes its subcommand as `--cmd`, and lists when given none.
