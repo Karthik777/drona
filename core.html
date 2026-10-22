@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.19">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Score the tool calls in Ramabana’s history, and build a warm start from accepted rounds.">
+
+<title>core – dhrona</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-da67263a7df5340935003c9d91ab9053.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="core – dhrona">
+<meta property="og:description" content="Score the tool calls in Ramabana’s history, and build a warm start from accepted rounds.">
+<meta property="og:site_name" content="dhrona">
+<meta name="twitter:title" content="core – dhrona">
+<meta name="twitter:description" content="Score the tool calls in Ramabana’s history, and build a warm start from accepted rounds.">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">dhrona</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./core.html">core</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">dhrona</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">core</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./rounds.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">rounds</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./sessions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">sessions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">tools</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./improve.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">improve</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#read-ramabana-history" id="toc-read-ramabana-history" class="nav-link active" data-scroll-target="#read-ramabana-history">Read Ramabana history</a></li>
+  <li><a href="#assess-a-route" id="toc-assess-a-route" class="nav-link" data-scroll-target="#assess-a-route">Assess a route</a></li>
+  <li><a href="#build-the-warm-start" id="toc-build-the-warm-start" class="nav-link" data-scroll-target="#build-the-warm-start">Build the warm start</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/Karthik777/drona/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="core.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">core</h1>
+</div>
+
+<div>
+  <div class="description">
+    Score the tool calls in Ramabana’s history, and build a warm start from accepted rounds.
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div id="b19df06b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:53.980255+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:54.979263+00:00&quot;,&quot;total&quot;:0.9990135420000001}}" data-execution_count="3">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L35" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="assessment" class="level3">
+<h3 class="anchored" data-anchor-id="assessment">Assessment</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> Assessment(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    score:<span class="bu">int</span>, calls:<span class="bu">int</span>, findings:<span class="bu">tuple</span>[__main__.Finding, ...]</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="va">None</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The score, call count and findings for one or more turns.</em></p>
+</section>
+</div>
+<div id="df72e90d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:54.979403+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:54.982952+00:00&quot;,&quot;total&quot;:0.003552588000019341}}" data-execution_count="4">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L26" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="finding" class="level3">
+<h3 class="anchored" data-anchor-id="finding">Finding</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> Finding(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    kind:<span class="bu">str</span>, tool:<span class="bu">str</span>, index:<span class="bu">int</span>, message:<span class="bu">str</span>, turn:<span class="bu">int</span> <span class="op">|</span> <span class="va">None</span><span class="op">=</span><span class="va">None</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="va">None</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>One tool-route problem in a recorded turn.</em></p>
+</section>
+</div>
+<section id="read-ramabana-history" class="level2">
+<h2 class="anchored" data-anchor-id="read-ramabana-history">Read Ramabana history</h2>
+<p>Ramabana appends each finished turn to <code>~/.config/ramabana/agent-history.jsonl</code>, one JSON object per line. A turn holds the <code>prompt</code>, the <code>reply</code>, the <code>session</code> it belongs to, and an <code>activity</code> list with one row per tool call: the tool’s name, its arguments, the result in <code>detail</code>, and <code>ok</code> for whether it succeeded. A result longer than 600 characters is kept whole in <code>&lt;cfg&gt;/&lt;log&gt;-details/&lt;session&gt;.jsonl</code>, and the row keeps its start and a <code>details</code> reference. <a href="https://Karthik777.github.io/drona/core.html#read_history"><code>read_history</code></a> reads the file and puts those results back whole through Ramabana’s <code>hydrate_turns</code>, so a row written before Ramabana 0.2.59 reads as it always did, and <a href="https://Karthik777.github.io/drona/core.html#tool_args"><code>tool_args</code></a> returns a call’s arguments as a dict even when the row stored them as JSON text.</p>
+<div id="826d5606" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:54.985988+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:54.989207+00:00&quot;,&quot;total&quot;:0.003222088000001122}}" data-execution_count="6">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L58" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="tool_args" class="level3">
+<h3 class="anchored" data-anchor-id="tool_args">tool_args</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tool_args(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    action</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The call arguments of <code>action</code> as a dict.</em></p>
+</section>
+</div>
+<div id="4116a53e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:54.989306+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:54.992563+00:00&quot;,&quot;total&quot;:0.0032602050000036797}}" data-execution_count="7">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L48" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="read_history" class="level3">
+<h3 class="anchored" data-anchor-id="read_history">read_history</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> read_history(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    path:pathlib.PosixPath<span class="op">=</span>Path(<span class="st">'/home/runner/.config/ramabana/agent-history.jsonl'</span>), <span class="co"># Ramabana `agent-history.jsonl` path</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    session:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># optional session id</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Read finished Ramabana turns in the order they were written, skipping incomplete lines, with long tool results whole.</em></p>
+</section>
+</div>
+<div id="51297f3b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:54.993502+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.017820+00:00&quot;,&quot;total&quot;:0.024325049999987414}}" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># synthetic logs only: a long result comes back whole from its details file, an old inline row is unchanged,</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># and a missing details file or a reference out of the config folder leaves the clipped text</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tempfile</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> test_eq</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> Path(tempfile.mkdtemp())</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="bu">long</span> <span class="op">=</span> <span class="st">'x'</span> <span class="op">*</span> <span class="dv">5000</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> [{<span class="st">'session'</span>: <span class="st">'a'</span>, <span class="st">'prompt'</span>: <span class="st">'old'</span>, <span class="st">'activity'</span>: [{<span class="st">'id'</span>: <span class="st">'c0'</span>, <span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'detail'</span>: <span class="st">'inline'</span>}]},</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>        {<span class="st">'session'</span>: <span class="st">'a'</span>, <span class="st">'prompt'</span>: <span class="st">'new'</span>, <span class="st">'details'</span>: <span class="st">'agent-details/a.jsonl'</span>, <span class="st">'activity'</span>: [{<span class="st">'id'</span>: <span class="st">'c1'</span>, <span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'detail'</span>: <span class="bu">long</span>[:<span class="dv">600</span>]}]},</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>        {<span class="st">'session'</span>: <span class="st">'b'</span>, <span class="st">'prompt'</span>: <span class="st">'gone'</span>, <span class="st">'details'</span>: <span class="st">'agent-details/b.jsonl'</span>, <span class="st">'activity'</span>: [{<span class="st">'id'</span>: <span class="st">'c2'</span>, <span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'detail'</span>: <span class="st">'y'</span> <span class="op">*</span> <span class="dv">600</span>}]},</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        {<span class="st">'session'</span>: <span class="st">'b'</span>, <span class="st">'prompt'</span>: <span class="st">'out'</span>, <span class="st">'details'</span>: <span class="st">'../x/a.jsonl'</span>, <span class="st">'activity'</span>: [{<span class="st">'id'</span>: <span class="st">'c1'</span>, <span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'detail'</span>: <span class="st">'z'</span>}]}]</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>(d<span class="op">/</span><span class="st">'agent-history.jsonl'</span>).write_text(<span class="st">''</span>.join(json.dumps(r) <span class="op">+</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span> <span class="cf">for</span> r <span class="kw">in</span> rows) <span class="op">+</span> <span class="st">'{"torn'</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>(d<span class="op">/</span><span class="st">'agent-details'</span>).mkdir()<span class="op">;</span> (d<span class="op">/</span><span class="st">'agent-details'</span><span class="op">/</span><span class="st">'a.jsonl'</span>).write_text(json.dumps({<span class="st">'turn_id'</span>: <span class="st">''</span>, <span class="st">'details'</span>: {<span class="st">'c1'</span>: <span class="bu">long</span>}}) <span class="op">+</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>got <span class="op">=</span> read_history(d<span class="op">/</span><span class="st">'agent-history.jsonl'</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(got, L)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>test_eq([t[<span class="st">'activity'</span>][<span class="dv">0</span>][<span class="st">'detail'</span>] <span class="cf">for</span> t <span class="kw">in</span> got], [<span class="st">'inline'</span>, <span class="bu">long</span>, <span class="st">'y'</span> <span class="op">*</span> <span class="dv">600</span>, <span class="st">'z'</span>])</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>test_eq(read_history(d<span class="op">/</span><span class="st">'agent-history.jsonl'</span>, session<span class="op">=</span><span class="st">'a'</span>).attrgot(<span class="st">'prompt'</span>), [<span class="st">'old'</span>, <span class="st">'new'</span>])</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co"># the inline log keeps its own details folder beside it</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>(d<span class="op">/</span><span class="st">'inline-history.jsonl'</span>).write_text(json.dumps(rows[<span class="dv">1</span>] <span class="op">|</span> {<span class="st">'details'</span>: <span class="st">'inline-details/a.jsonl'</span>}) <span class="op">+</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>(d<span class="op">/</span><span class="st">'inline-details'</span>).mkdir()<span class="op">;</span> (d<span class="op">/</span><span class="st">'inline-details'</span><span class="op">/</span><span class="st">'a.jsonl'</span>).write_text(json.dumps({<span class="st">'details'</span>: {<span class="st">'c1'</span>: <span class="bu">long</span>}}) <span class="op">+</span> <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>test_eq(read_history(d<span class="op">/</span><span class="st">'inline-history.jsonl'</span>)[<span class="dv">0</span>][<span class="st">'activity'</span>][<span class="dv">0</span>][<span class="st">'detail'</span>], <span class="bu">long</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="assess-a-route" class="level2">
+<h2 class="anchored" data-anchor-id="assess-a-route">Assess a route</h2>
+<p>A route is the sequence of tool calls a turn made. <a href="https://Karthik777.github.io/drona/core.html#assess_turn"><code>assess_turn</code></a> checks it for six kinds of problem and returns an <a href="https://Karthik777.github.io/drona/core.html#assessment"><code>Assessment</code></a>: a score that starts at 100 and loses 20 points per <a href="https://Karthik777.github.io/drona/core.html#finding"><code>Finding</code></a>, the number of calls, and the findings themselves. A route is marked down when:</p>
+<ul>
+<li>the request names GitHub and FOSSICK but the first research call is something other than <code>fossick read-gh-repo</code> (<code>route</code>),</li>
+<li>a tool could not decode the arguments it was sent (<code>schema</code>),</li>
+<li>a shell command does what a dedicated tool does (<code>bypass</code>),</li>
+<li>a shell command fails with a usage error (<code>tool_protocol</code>); a test that really fails is not one,</li>
+<li>a call that already failed is repeated with the same arguments (<code>repeat_failure</code>),</li>
+<li>a call the person refused is made again instead of asking them (<code>denial_retry</code>).</li>
+</ul>
+<p><a href="https://Karthik777.github.io/drona/core.html#assess_history"><code>assess_history</code></a> assesses several turns together, and each of its findings records the turn it came from.</p>
+<div id="79ff0643" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.031194+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.034694+00:00&quot;,&quot;total&quot;:0.0035049170000149843}}" data-execution_count="10">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L168" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="assess_history" class="level3">
+<h3 class="anchored" data-anchor-id="assess_history">assess_history</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> assess_history(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    turns</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Assess several turns as one route corpus, carrying refusals into the next turn of the same session.</em></p>
+</section>
+</div>
+<div id="5de41953" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.034817+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.038699+00:00&quot;,&quot;total&quot;:0.0038853500000186614}}" data-execution_count="11">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L151" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="assess_turn" class="level3">
+<h3 class="anchored" data-anchor-id="assess_turn">assess_turn</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> assess_turn(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    turn, denied:<span class="bu">tuple</span><span class="op">=</span>()</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Score the tool calls of one Ramabana turn, where <code>denied</code> holds calls refused in the previous turn.</em></p>
+</section>
+</div>
+<div id="c14f79d8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.038814+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.041639+00:00&quot;,&quot;total&quot;:0.0028288169999939328}}" data-execution_count="12">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L126" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="denial_reason" class="level3">
+<h3 class="anchored" data-anchor-id="denial_reason">denial_reason</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> denial_reason(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    action</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The reason given for a refused approval, or <code>None</code> when <code>action</code> is not a refusal.</em></p>
+</section>
+</div>
+<div id="09546dae" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.041738+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.045072+00:00&quot;,&quot;total&quot;:0.003337649999991754}}" data-execution_count="13">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L102" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="bypass_tool" class="level3">
+<h3 class="anchored" data-anchor-id="bypass_tool">bypass_tool</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> bypass_tool(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    command, offered:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The dedicated tool that <code>command</code> stands in for, or None when some part of it needs the shell.</em></p>
+</section>
+</div>
+<p>This turn was asked to use FOSSICK on a GitHub repository but began with a web search, so it loses 20 points for its route.</p>
+<div id="d245621a" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>bad_route <span class="op">=</span> {</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">'prompt'</span>: <span class="st">'Use fossick to research https://github.com/AnswerDotAI/llmdojo'</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'activity'</span>: [</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        {<span class="st">'tool'</span>: <span class="st">'web_search'</span>, <span class="st">'ok'</span>: <span class="va">True</span>, <span class="st">'args'</span>: {<span class="st">'query'</span>: <span class="st">'llmdojo'</span>}},</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        {<span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'ok'</span>: <span class="va">True</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>         <span class="st">'args'</span>: {<span class="st">'command'</span>: <span class="st">'fossick read-gh-repo https://github.com/AnswerDotAI/llmdojo'</span>}},</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> assess_turn(bad_route)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> a.score <span class="op">==</span> <span class="dv">80</span> <span class="kw">and</span> a.findings[<span class="dv">0</span>].kind <span class="op">==</span> <span class="st">'route'</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>a</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A malformed edit sent twice earns a <code>schema</code> finding each time, and the second call also earns a <code>repeat_failure</code>, because the model did not change course after the first failure.</p>
+<div id="7547943c" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>bad_edit <span class="op">=</span> {<span class="st">'activity'</span>: [</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'tool'</span>: <span class="st">'edit_cell'</span>, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'args'</span>: {<span class="st">'commands'</span>: <span class="st">''</span>},</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>     <span class="st">'detail'</span>: <span class="st">'ERROR: could not parse commands'</span>},</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'tool'</span>: <span class="st">'edit_cell'</span>, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'args'</span>: {<span class="st">'commands'</span>: <span class="st">''</span>},</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>     <span class="st">'detail'</span>: <span class="st">'ERROR: could not parse commands'</span>},</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>]}</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> assess_turn(bad_edit)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.kind <span class="cf">for</span> f <span class="kw">in</span> a.findings] <span class="op">==</span> [<span class="st">'schema'</span>, <span class="st">'repeat_failure'</span>, <span class="st">'schema'</span>]</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>a</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="c10c006f" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>json_error <span class="op">=</span> {<span class="st">'activity'</span>: [{<span class="st">'tool'</span>: <span class="st">'edit_cell'</span>, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'args'</span>: {<span class="st">'commands'</span>: <span class="st">''</span>}, <span class="st">'detail'</span>: <span class="st">'ERROR: JSONDecodeError while parsing commands'</span>}]}</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_turn(json_error).findings[<span class="dv">0</span>].kind <span class="op">==</span> <span class="st">'schema'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://Karthik777.github.io/drona/core.html#bypass_tool"><code>bypass_tool</code></a> names the dedicated tool a shell command stands in for, or returns None. It splits the command at <code>&amp;&amp;</code>, <code>||</code>, <code>;</code> and newlines, ignoring those inside quotes and heredoc bodies, and looks at the part of each piece before any <code>|</code>. Every piece must map to a tool, because a piece with no tool needed the shell anyway, and the answer is the first piece’s tool. <code>cd</code> pieces, <code>env</code> and <code>VAR=value</code> prefixes, and git’s global options (<code>-C</code>, <code>-c</code>, <code>--no-pager</code>) are ignored. A command that ends in <code>&amp;</code> maps to the background runner, <code>run_shell_bg</code>. When <code>offered</code> is given, a tool outside it gives None.</p>
+<div id="635bf592" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git diff --stat'</span>) <span class="op">==</span> <span class="st">'git_diff'</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'cd /x &amp;&amp; git status --short'</span>) <span class="op">==</span> <span class="st">'git_status'</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'env A=1 rg foo src'</span>) <span class="op">==</span> <span class="st">'grep'</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git show HEAD~1'</span>) <span class="kw">is</span> <span class="va">None</span>   <span class="co"># git_log lists commits; no tool shows a commit's contents</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git log -p -3'</span>) <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> bypass_tool(<span class="st">'git log --stat -5'</span>) <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> bypass_tool(<span class="st">'git log -S foo'</span>) <span class="kw">is</span> <span class="va">None</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> <span class="bu">any</span>(bypass_tool(<span class="ss">f'git log </span><span class="sc">{</span>o<span class="sc">}</span><span class="ss">'</span>) <span class="cf">for</span> o <span class="kw">in</span> (<span class="st">'-Sfoo'</span>, <span class="st">'-Gfoo'</span>, <span class="st">'--shortstat'</span>, <span class="st">'-u'</span>, <span class="st">'--patch-with-stat'</span>, <span class="st">'-L1,5:a.py'</span>))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git log --oneline -3'</span>) <span class="op">==</span> <span class="st">'git_log'</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git push origin main'</span>) <span class="op">==</span> <span class="st">'git_remote'</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">"sed -n '1,80p' pyproject.toml"</span>) <span class="op">==</span> <span class="st">'view_file'</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">"sed -i 's/a/b/' f.py"</span>) <span class="op">==</span> <span class="st">'replace_text'</span></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">"cat &gt; f.py &lt;&lt;'PY'"</span>) <span class="op">==</span> <span class="st">'create_file'</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'cat README.md'</span>) <span class="op">==</span> <span class="st">'view_file'</span></span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'curl -s https://x.y'</span>) <span class="op">==</span> <span class="st">'read_url'</span></span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'kosha daemon &amp;'</span>) <span class="op">==</span> <span class="st">'run_shell_bg'</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'uv run pytest -q | tail -5'</span>) <span class="kw">is</span> <span class="va">None</span></span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git blame f.py'</span>) <span class="kw">is</span> <span class="va">None</span></span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git diff'</span>, offered<span class="op">=</span>{<span class="st">'run_shell'</span>}) <span class="kw">is</span> <span class="va">None</span></span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> tool_args({<span class="st">'args'</span>: <span class="st">'{"command": "ls"}'</span>}) <span class="op">==</span> {<span class="st">'command'</span>: <span class="st">'ls'</span>}</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> tool_args({<span class="st">'args'</span>: <span class="st">'not json'</span>}) <span class="op">==</span> {} <span class="kw">and</span> tool_args({}) <span class="op">==</span> {}</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'FOO=1 BAR=2 git status'</span>) <span class="op">==</span> <span class="st">'git_status'</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git -C /x diff'</span>) <span class="op">==</span> <span class="st">'git_diff'</span></span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git --no-pager log -3'</span>) <span class="op">==</span> <span class="st">'git_log'</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git -c core.pager=cat -C /x log -3'</span>) <span class="op">==</span> <span class="st">'git_log'</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="va">None</span>) <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> bypass_tool(<span class="st">''</span>) <span class="kw">is</span> <span class="va">None</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git diff --stat HEAD main'</span>) <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> bypass_tool(<span class="st">'git diff HEAD~1'</span>) <span class="kw">is</span> <span class="va">None</span>   <span class="co"># git_diff shows the working tree or index, not refs</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git diff --staged -- a.py'</span>) <span class="op">==</span> <span class="st">'git_diff'</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git add x.py &amp;&amp; git status --short'</span>) <span class="kw">is</span> <span class="va">None</span>   <span class="co"># the shell was needed for `git add` anyway</span></span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git status &amp;&amp; git diff'</span>) <span class="op">==</span> <span class="st">'git_status'</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (bypass_tool(<span class="st">'rg "a; b" src'</span>), bypass_tool(<span class="st">'git commit -m "fix; tidy"'</span>), bypass_tool(<span class="st">'sed -n "1,5p;9,12p" f.py'</span>)) <span class="op">==</span> (<span class="st">'grep'</span>, <span class="st">'git_commit'</span>, <span class="st">'view_file'</span>)   <span class="co"># separators inside quotes</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">"cat &gt; f.py &lt;&lt;'PY'</span><span class="ch">\n</span><span class="st">x = 1; y = 2</span><span class="ch">\n</span><span class="st">PY"</span>) <span class="op">==</span> <span class="st">'create_file'</span>   <span class="co"># a heredoc body is not a command</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git diff 2&gt;&amp;1'</span>) <span class="op">==</span> <span class="st">'git_diff'</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'rg "a </span><span class="ch">\\</span><span class="st">" &amp;&amp; b" src'</span>) <span class="op">==</span> <span class="st">'grep'</span>   <span class="co"># an escaped quote stays inside the string</span></span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'git status</span><span class="ch">\n</span><span class="st">rm -rf build'</span>) <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> bypass_tool(<span class="st">'ls</span><span class="ch">\n</span><span class="st">echo $((1&lt;&lt;3))'</span>) <span class="kw">is</span> <span class="va">None</span>   <span class="co"># a newline separates commands; `&lt;&lt;3` is no heredoc</span></span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'cat &gt; f.txt &lt;&lt;EOF</span><span class="ch">\n</span><span class="st">hi; there</span><span class="ch">\n</span><span class="st">EOF</span><span class="ch">\n</span><span class="st">rm -rf build'</span>) <span class="kw">is</span> <span class="va">None</span>   <span class="co"># the command after a heredoc still counts</span></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> bypass_tool(<span class="st">'cat &lt;&lt;EOF &gt; f.txt</span><span class="ch">\n</span><span class="st">x</span><span class="ch">\n</span><span class="st">EOF'</span>) <span class="op">==</span> <span class="st">'create_file'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A <code>schema</code> finding applies to any tool whose arguments failed to decode. A <code>bypass</code> finding applies only to <code>run_shell</code>.</p>
+<div id="5732053e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> {<span class="st">'prompt'</span>: <span class="st">'x'</span>, <span class="st">'activity'</span>: [</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'args'</span>: {<span class="st">'command'</span>: <span class="st">'git diff'</span>}, <span class="st">'ok'</span>: <span class="va">True</span>},</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'args'</span>: {<span class="st">'command'</span>: <span class="st">'x'</span>}, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'detail'</span>: <span class="st">'JSONDecodeError: Extra data'</span>},</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'tool'</span>: <span class="st">'replace_text'</span>, <span class="st">'args'</span>: <span class="st">'</span><span class="sc">{}</span><span class="st">'</span>, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'detail'</span>: <span class="st">'JSON decoder failed'</span>},</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'ok'</span>: <span class="va">False</span>}]}</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>kinds <span class="op">=</span> [(f.kind, f.tool) <span class="cf">for</span> f <span class="kw">in</span> assess_turn(t).findings]</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (<span class="st">'bypass'</span>, <span class="st">'run_shell'</span>) <span class="kw">in</span> kinds <span class="kw">and</span> (<span class="st">'schema'</span>, <span class="st">'run_shell'</span>) <span class="kw">in</span> kinds <span class="kw">and</span> (<span class="st">'schema'</span>, <span class="st">'replace_text'</span>) <span class="kw">in</span> kinds</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (<span class="st">'tool_protocol'</span>, <span class="st">'run_shell'</span>) <span class="kw">not</span> <span class="kw">in</span> kinds  <span class="co"># precedence bug regression</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A turn gets one <code>bypass</code> finding per dedicated tool, however many shell calls stood in for it. A row with no <code>ok</code> key is treated as unknown, not as a failure.</p>
+<div id="20aed838" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> {<span class="st">'activity'</span>: [{<span class="st">'tool'</span>: <span class="st">'run_shell'</span>, <span class="st">'args'</span>: {<span class="st">'command'</span>: c}, <span class="st">'ok'</span>: <span class="va">True</span>} <span class="cf">for</span> c <span class="kw">in</span> (<span class="st">'git diff'</span>, <span class="st">'git diff --stat'</span>, <span class="st">'git diff HEAD~1'</span>, <span class="st">'cat f'</span>)]}</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.kind <span class="cf">for</span> f <span class="kw">in</span> assess_turn(t).findings] <span class="op">==</span> [<span class="st">'bypass'</span>, <span class="st">'bypass'</span>]</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>unknown <span class="op">=</span> {<span class="st">'activity'</span>: [{<span class="st">'tool'</span>: <span class="st">'edit_cell'</span>, <span class="st">'args'</span>: {}, <span class="st">'detail'</span>: <span class="st">'ERROR: could not parse commands'</span>}]<span class="op">*</span><span class="dv">2</span>}</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_turn(unknown).findings <span class="op">==</span> ()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Some calls need a person’s approval. A refusal is recorded as a failed row of kind <code>ask</code>, or as a failed row whose detail starts with <code>Denied by human operator</code>. <a href="https://Karthik777.github.io/drona/core.html#denial_reason"><code>denial_reason</code></a> returns the reason the person gave, <code>'no reason given'</code> when there is none, and None for a row that is not a refusal. A refusal on its own is not a tool failure and earns no finding. Making the same call again instead of asking the person is a <code>denial_retry</code>, whether it happens later in the same turn or in the next turn of the same session when the reply in between asked no question.</p>
+<div id="cefdb1ae" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>edit <span class="op">=</span> {<span class="st">'tool'</span>: <span class="st">'replace_text'</span>, <span class="st">'args'</span>: {<span class="st">'path'</span>: <span class="st">'x.py'</span>, <span class="st">'edits'</span>: []}}</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>refused <span class="op">=</span> {<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'kind'</span>: <span class="st">'ask'</span>, <span class="st">'detail'</span>: <span class="st">'Denied by human operator. Reason given: no answer after 300s'</span>}</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> denial_reason(refused) <span class="op">==</span> <span class="st">'no answer after 300s'</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> denial_reason({<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'detail'</span>: <span class="st">'Denied by human operator'</span>}) <span class="op">==</span> <span class="st">'no reason given'</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> denial_reason({<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'detail'</span>: <span class="st">'JSONDecodeError'</span>}) <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> denial_reason({<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">True</span>}) <span class="kw">is</span> <span class="va">None</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_turn({<span class="st">'activity'</span>: [refused]}).findings <span class="op">==</span> ()</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.kind <span class="cf">for</span> f <span class="kw">in</span> assess_turn({<span class="st">'activity'</span>: [refused, {<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'kind'</span>: <span class="st">'ask'</span>, <span class="st">'detail'</span>: <span class="st">'Denied by human operator'</span>}]}).findings] <span class="op">==</span> [<span class="st">'denial_retry'</span>]</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> assess_turn({<span class="st">'activity'</span>: [refused, {<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">True</span>}]})</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [(f.kind, f.tool, f.index) <span class="cf">for</span> f <span class="kw">in</span> a.findings] <span class="op">==</span> [(<span class="st">'denial_retry'</span>, <span class="st">'replace_text'</span>, <span class="dv">1</span>)] <span class="kw">and</span> a.score <span class="op">==</span> <span class="dv">80</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> a.findings[<span class="dv">0</span>].message <span class="op">==</span> <span class="st">'Ask the user about the refused call instead of retrying it.'</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> assess_turn({<span class="st">'activity'</span>: [refused, {<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'kind'</span>: <span class="st">'ask'</span>, <span class="st">'detail'</span>: <span class="st">'Denied by human operator'</span>}, {<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">True</span>}]})</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.kind <span class="cf">for</span> f <span class="kw">in</span> a.findings] <span class="op">==</span> [<span class="st">'denial_retry'</span>, <span class="st">'denial_retry'</span>]</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_turn({<span class="st">'activity'</span>: [refused, {<span class="op">**</span>edit, <span class="st">'args'</span>: {<span class="st">'path'</span>: <span class="st">'y.py'</span>, <span class="st">'edits'</span>: []}, <span class="st">'ok'</span>: <span class="va">True</span>}]}).findings <span class="op">==</span> ()</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_turn({<span class="st">'activity'</span>: [refused, {<span class="st">'tool'</span>: <span class="st">'edit_cell'</span>, <span class="st">'args'</span>: {}, <span class="st">'ok'</span>: <span class="va">False</span>, <span class="st">'detail'</span>: <span class="st">'ERROR: could not parse commands'</span>}]}).findings[<span class="dv">0</span>].kind <span class="op">==</span> <span class="st">'schema'</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="d1b38c7b" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>stall <span class="op">=</span> {<span class="st">'session'</span>: <span class="st">'s1'</span>, <span class="st">'reply'</span>: <span class="st">'I will retry the edit.'</span>, <span class="st">'activity'</span>: [refused]}</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>retry <span class="op">=</span> {<span class="st">'session'</span>: <span class="st">'s1'</span>, <span class="st">'reply'</span>: <span class="st">'Done.'</span>, <span class="st">'activity'</span>: [{<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">True</span>}]}</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>asked <span class="op">=</span> {<span class="op">**</span>stall, <span class="st">'reply'</span>: <span class="st">'The edit needs your approval. Shall I apply it?'</span>}</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.kind <span class="cf">for</span> f <span class="kw">in</span> assess_history([stall, retry]).findings] <span class="op">==</span> [<span class="st">'denial_retry'</span>]</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_history([stall, retry]).findings[<span class="dv">0</span>].index <span class="op">==</span> <span class="dv">0</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_history([asked, retry]).findings <span class="op">==</span> ()</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_history([stall, {<span class="op">**</span>retry, <span class="st">'session'</span>: <span class="st">'s2'</span>}]).findings <span class="op">==</span> ()</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_history([stall, {<span class="st">'session'</span>: <span class="st">'s1'</span>, <span class="st">'reply'</span>: <span class="st">'x'</span>, <span class="st">'activity'</span>: []}, retry]).findings <span class="op">==</span> ()</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> assess_history([stall, {<span class="op">**</span>retry, <span class="st">'activity'</span>: [refused, {<span class="op">**</span>edit, <span class="st">'ok'</span>: <span class="va">True</span>}]}]).findings[<span class="dv">0</span>].index <span class="op">==</span> <span class="dv">0</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> Finding(<span class="st">'a'</span>, <span class="st">'b'</span>, <span class="dv">0</span>, <span class="st">'m'</span>).turn <span class="kw">is</span> <span class="va">None</span> <span class="kw">and</span> asdict(Finding(<span class="st">'a'</span>, <span class="st">'b'</span>, <span class="dv">0</span>, <span class="st">'m'</span>, turn<span class="op">=</span><span class="dv">2</span>))[<span class="st">'turn'</span>] <span class="op">==</span> <span class="dv">2</span>   <span class="co"># positional construction still works</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.turn <span class="cf">for</span> f <span class="kw">in</span> assess_history([stall, retry]).findings] <span class="op">==</span> [<span class="dv">1</span>] <span class="kw">and</span> [f.turn <span class="cf">for</span> f <span class="kw">in</span> assess_turn(retry, {_failure_key(refused)}).findings] <span class="op">==</span> [<span class="va">None</span>]</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [f.turn <span class="cf">for</span> f <span class="kw">in</span> assess_history([bad_route, stall, retry]).findings] <span class="op">==</span> [<span class="dv">0</span>, <span class="dv">2</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A history file may end in a line the agent has not finished writing. <a href="https://Karthik777.github.io/drona/core.html#read_history"><code>read_history</code></a> skips it, and blank lines too.</p>
+<div id="5140ab2a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.049812+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.051130+00:00&quot;,&quot;total&quot;:0.0013211549999994077}}" data-execution_count="14">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tempfile <span class="im">import</span> TemporaryDirectory</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> TemporaryDirectory() <span class="im">as</span> d:</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> Path(d)<span class="op">/</span><span class="st">'h.jsonl'</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    p.write_text(<span class="st">'{"session": "a"}</span><span class="ch">\n\n</span><span class="st">{"session": "b"}</span><span class="ch">\n</span><span class="st">{"sess'</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> read_history(p).attrgot(<span class="st">'session'</span>) <span class="op">==</span> [<span class="st">'a'</span>, <span class="st">'b'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="build-the-warm-start" class="level2">
+<h2 class="anchored" data-anchor-id="build-the-warm-start">Build the warm start</h2>
+<p>A warm start is chat history made from accepted rounds, placed in front of a new chat so the model sees good tool use first. <a href="https://Karthik777.github.io/drona/core.html#warm_start"><code>warm_start</code></a> builds it in Urai’s message format from the user’s library in <code>ROUNDS_DIR</code> and the seeds packaged with dhrona in <code>SEEDS_DIR</code>. When you pass the tools you offer, a round is replayed only if every recorded call still binds to the offered tool’s signature. Rounds are sorted by <code>meta.rank</code>, lower first and 50 when it is missing, and then rounds recorded on <code>model</code> come first. The sort is stable, so a library round comes before a seed of equal rank. <code>limit</code> keeps the first few, 2 by default. Rishi re-exports the same chat format, so any Rishi backend can continue this history through <code>messages=</code>, and <a href="https://Karthik777.github.io/drona/core.html#prepare_chat"><code>prepare_chat</code></a> puts the warm start into an empty chat object.</p>
+<div id="451fe1e6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.060056+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.063117+00:00&quot;,&quot;total&quot;:0.0030638740000199505}}" data-execution_count="16">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L269" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="prepare_chat" class="level3">
+<h3 class="anchored" data-anchor-id="prepare_chat">prepare_chat</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> prepare_chat(</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    chat, tools:NoneType<span class="op">=</span><span class="va">None</span>, model:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Put the warm start into an empty Urai-compatible chat.</em></p>
+</section>
+</div>
+<div id="46143e68" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.063209+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.065764+00:00&quot;,&quot;total&quot;:0.0025581360000046516}}" data-execution_count="17">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L263" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="completion_valid" class="level3">
+<h3 class="anchored" data-anchor-id="completion_valid">completion_valid</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> completion_valid(</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    cid, state:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Whether <code>cid</code> names a completion recorded for the current round revision.</em></p>
+</section>
+</div>
+<div id="c8699b52" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.065860+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.067883+00:00&quot;,&quot;total&quot;:0.002025927999994792}}" data-execution_count="18">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L255" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="register_completion" class="level3">
+<h3 class="anchored" data-anchor-id="register_completion">register_completion</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> register_completion(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    state:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Record one clean round and return its completion id.</em></p>
+</section>
+</div>
+<div id="950cbb10" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.067952+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.069749+00:00&quot;,&quot;total&quot;:0.0017987420000054044}}" data-execution_count="19">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L251" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="receipt_path" class="level3">
+<h3 class="anchored" data-anchor-id="receipt_path">receipt_path</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> receipt_path(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    state:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The file that holds completion receipts.</em></p>
+</section>
+</div>
+<div id="1275e5f5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.069838+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.071568+00:00&quot;,&quot;total&quot;:0.0017323339999961718}}" data-execution_count="20">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L247" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="dhrona_version" class="level3">
+<h3 class="anchored" data-anchor-id="dhrona_version">dhrona_version</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dhrona_version():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The package version and round revision that a completion receipt records.</em></p>
+</section>
+</div>
+<div id="27615a25" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.071633+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.073595+00:00&quot;,&quot;total&quot;:0.0019648269999947843}}" data-execution_count="21">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L243" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="warm_start" class="level3">
+<h3 class="anchored" data-anchor-id="warm_start">warm_start</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> warm_start(</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>    tools:NoneType<span class="op">=</span><span class="va">None</span>, model:NoneType<span class="op">=</span><span class="va">None</span>, limit:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span>, dirs:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Chat history in Urai’s format from the accepted rounds that fit the offered tools, best-ranked and same-model first.</em></p>
+</section>
+</div>
+<div id="0099d9cc" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.073662+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.076162+00:00&quot;,&quot;total&quot;:0.0025037259999862727}}" data-execution_count="22">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L233" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="fit_rounds" class="level3">
+<h3 class="anchored" data-anchor-id="fit_rounds">fit_rounds</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fit_rounds(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    tools:NoneType<span class="op">=</span><span class="va">None</span>, model:NoneType<span class="op">=</span><span class="va">None</span>, limit:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span>, dirs:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Accepted rounds that fit the offered tools, best-ranked and same-model first, and every round left out with its reason.</em></p>
+</section>
+</div>
+<div id="7312d749" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.076253+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.079558+00:00&quot;,&quot;total&quot;:0.0033099590000063017}}" data-execution_count="23">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L219" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="round_msgs" class="level3">
+<h3 class="anchored" data-anchor-id="round_msgs">round_msgs</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> round_msgs(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    rnd</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The messages of an accepted round in Urai’s format.</em></p>
+</section>
+</div>
+<div id="dbc8282c" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.079656+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.082715+00:00&quot;,&quot;total&quot;:0.00306343299999412}}" data-execution_count="24">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L212" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="load_rounds" class="level3">
+<h3 class="anchored" data-anchor-id="load_rounds">load_rounds</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> load_rounds(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    dirs:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Accepted rounds from the library and packaged seeds, skipping unreadable files.</em></p>
+</section>
+</div>
+<div id="8fc7f147" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.082834+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.085526+00:00&quot;,&quot;total&quot;:0.0026951989999872694}}" data-execution_count="25">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L208" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="round_valid" class="level3">
+<h3 class="anchored" data-anchor-id="round_valid">round_valid</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> round_valid(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    rnd, tools</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Whether every call in <code>rnd</code> binds to <code>tools</code>, where a <code>None</code> tool checks only the name.</em></p>
+</section>
+</div>
+<div id="e413f960" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.085616+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.088598+00:00&quot;,&quot;total&quot;:0.0029853180000145585}}" data-execution_count="26">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L199" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="misfit" class="level3">
+<h3 class="anchored" data-anchor-id="misfit">misfit</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> misfit(</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>    rnd, tools</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Why <code>rnd</code> does not bind to <code>tools</code> (a missing tool or a call that no longer matches), or <code>''</code> when it fits.</em></p>
+</section>
+</div>
+<div id="011daf27" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.088693+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.091405+00:00&quot;,&quot;total&quot;:0.0027166699999838784}}" data-execution_count="27">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L195" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="round_calls" class="level3">
+<h3 class="anchored" data-anchor-id="round_calls">round_calls</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> round_calls(</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    rnd</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>The <code>(tool, arguments)</code> pairs an accepted round makes.</em></p>
+</section>
+</div>
+<div id="83a0376e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.091496+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.094254+00:00&quot;,&quot;total&quot;:0.0027614170000163085}}" data-execution_count="28">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L191" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="as_tools" class="level3">
+<h3 class="anchored" data-anchor-id="as_tools">as_tools</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> as_tools(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    tools</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Tools keyed by name, from a dict or an iterable of callables, partials, or names (a name maps to <code>None</code>).</em></p>
+</section>
+</div>
+<div id="e7dc9099" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.094346+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.097070+00:00&quot;,&quot;total&quot;:0.0027283879999799865}}" data-execution_count="29">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L180" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="call_valid" class="level3">
+<h3 class="anchored" data-anchor-id="call_valid">call_valid</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> call_valid(</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    args, fn</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Whether <code>fn</code> accepts <code>args</code> as keyword arguments.</em></p>
+</section>
+</div>
+<div id="40a259da" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> warm_start()</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [tc.name <span class="cf">for</span> m <span class="kw">in</span> hist <span class="cf">if</span> m.get(<span class="st">'tool_calls'</span>) <span class="cf">for</span> tc <span class="kw">in</span> m[<span class="st">'tool_calls'</span>]] <span class="op">==</span> [<span class="st">'git_status'</span>, <span class="st">'git_diff'</span>, <span class="st">'git_commit'</span>, <span class="st">'git_divergence'</span>, <span class="st">'git_remote'</span>, <span class="st">'search_code'</span>, <span class="st">'grep'</span>, <span class="st">'ls'</span>]</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> hist[<span class="dv">2</span>][<span class="st">'tool_call_id'</span>] <span class="op">==</span> hist[<span class="dv">1</span>][<span class="st">'tool_calls'</span>][<span class="dv">0</span>][<span class="st">'id'</span>]</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>hist[:<span class="dv">3</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://Karthik777.github.io/drona/core.html#call_valid"><code>call_valid</code></a> checks one call by binding its arguments to the tool’s signature. <code>inspect.signature</code> follows <code>functools.wraps</code> and accepts any keyword for a <code>**kwargs</code> parameter, so wrapped and permissive tools pass. <a href="https://Karthik777.github.io/drona/core.html#round_valid"><code>round_valid</code></a> checks every call in a round, and <a href="https://Karthik777.github.io/drona/core.html#misfit"><code>misfit</code></a> says why a round does not fit.</p>
+<div id="9b85879e" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.097889+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.102825+00:00&quot;,&quot;total&quot;:0.004939339999992853}}" data-execution_count="30">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> functools</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_shell(command, cwd<span class="op">=</span><span class="st">'.'</span>, timeout<span class="op">=</span><span class="dv">60</span>): ...</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> grep(pattern, <span class="op">**</span>kw): ...</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a><span class="at">@functools.wraps</span>(run_shell)</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> wrapped(<span class="op">*</span>a, <span class="op">**</span>k): <span class="cf">return</span> run_shell(<span class="op">*</span>a, <span class="op">**</span>k)</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> call_valid({<span class="st">'command'</span>: <span class="st">'ls'</span>}, run_shell) <span class="kw">and</span> <span class="kw">not</span> call_valid({}, run_shell)</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> call_valid({<span class="st">'command'</span>: <span class="st">'ls'</span>, <span class="st">'bogus'</span>: <span class="dv">1</span>}, run_shell)</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> call_valid({<span class="st">'pattern'</span>: <span class="st">'x'</span>, <span class="st">'anything'</span>: <span class="dv">1</span>}, grep) <span class="kw">and</span> call_valid({<span class="st">'command'</span>: <span class="st">'ls'</span>}, wrapped)</span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>seed <span class="op">=</span> <span class="bu">next</span>(r <span class="cf">for</span> r <span class="kw">in</span> load_rounds([SEEDS_DIR]) <span class="cf">if</span> r[<span class="st">'meta'</span>][<span class="st">'name'</span>] <span class="op">==</span> <span class="st">'fossick-github'</span>)</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> round_calls(seed)[<span class="dv">0</span>][<span class="dv">0</span>] <span class="op">==</span> <span class="st">'run_shell'</span></span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> round_valid(seed, as_tools([run_shell])) <span class="kw">and</span> <span class="kw">not</span> round_valid(seed, as_tools([grep]))</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>msgs <span class="op">=</span> warm_start([run_shell], dirs<span class="op">=</span>[SEEDS_DIR])</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> msgs[<span class="dv">0</span>][<span class="st">'role'</span>] <span class="op">==</span> <span class="st">'user'</span> <span class="kw">and</span> <span class="bu">any</span>(m.get(<span class="st">'tool_calls'</span>) <span class="cf">for</span> m <span class="kw">in</span> msgs)</span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> warm_start([grep], dirs<span class="op">=</span>[SEEDS_DIR]) <span class="op">==</span> []</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>A missing library folder or an unreadable round file never raises, and <a href="https://Karthik777.github.io/drona/core.html#warm_start"><code>warm_start</code></a> returns what it could read. With no tools given, every round is replayed without checking.</p>
+<div id="92a72607" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> TemporaryDirectory() <span class="im">as</span> d:</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>    (Path(d)<span class="op">/</span><span class="st">'bad.json'</span>).write_text(<span class="st">'{nope'</span>)</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> warm_start([run_shell], dirs<span class="op">=</span>[Path(d)<span class="op">/</span><span class="st">'missing'</span>, Path(d), SEEDS_DIR]) <span class="op">==</span> msgs</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>ranked <span class="op">=</span> <span class="bu">sorted</span>(load_rounds([SEEDS_DIR]), key<span class="op">=</span><span class="kw">lambda</span> r: r[<span class="st">'meta'</span>].get(<span class="st">'rank'</span>, <span class="dv">50</span>))</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> warm_start(dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="bu">len</span>(ranked)) <span class="op">==</span> [m <span class="cf">for</span> r <span class="kw">in</span> ranked <span class="cf">for</span> m <span class="kw">in</span> round_msgs(r)]  <span class="co"># no tools offered: every seed, by rank</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The offered tools are read once, so an iterator of callables still checks every round. A tool result with no id is still paired with its call.</p>
+<div id="80f12347" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.103600+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.106318+00:00&quot;,&quot;total&quot;:0.002721228000012843}}" data-execution_count="31">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> shutil</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> TemporaryDirectory() <span class="im">as</span> d:</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>    shutil.copy(SEEDS_DIR<span class="op">/</span><span class="st">'fossick-github.json'</span>, Path(d)<span class="op">/</span><span class="st">'copy.json'</span>)</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">assert</span> warm_start(<span class="bu">iter</span>([run_shell]), dirs<span class="op">=</span>[d, SEEDS_DIR]) <span class="op">==</span> msgs <span class="op">+</span> msgs</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>noid <span class="op">=</span> {<span class="st">'history'</span>: [</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'role'</span>: <span class="st">'user'</span>, <span class="st">'content'</span>: [{<span class="st">'type'</span>: <span class="st">'text'</span>, <span class="st">'text'</span>: <span class="st">'hi'</span>}]},</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'role'</span>: <span class="st">'assistant'</span>, <span class="st">'content'</span>: [{<span class="st">'type'</span>: <span class="st">'tool_use'</span>, <span class="st">'name'</span>: <span class="st">'run_shell'</span>, <span class="st">'arguments'</span>: {<span class="st">'command'</span>: <span class="st">'ls'</span>}}]},</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'role'</span>: <span class="st">'tool'</span>, <span class="st">'content'</span>: [{<span class="st">'type'</span>: <span class="st">'tool_result'</span>, <span class="st">'name'</span>: <span class="st">'run_shell'</span>, <span class="st">'text'</span>: <span class="st">'ok'</span>}]}]}</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> [m[<span class="st">'role'</span>] <span class="cf">for</span> m <span class="kw">in</span> round_msgs(noid)] <span class="op">==</span> [<span class="st">'user'</span>, <span class="st">'assistant'</span>, <span class="st">'tool'</span>]</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>tool_msg <span class="op">=</span> round_msgs(noid)[<span class="dv">2</span>]</span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(tool_msg[<span class="st">'tool_call_id'</span>], <span class="bu">str</span>) <span class="kw">and</span> tool_msg[<span class="st">'tool_call_id'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://Karthik777.github.io/drona/core.html#as_tools"><code>as_tools</code></a> also accepts tools as names, <code>functools.partial</code> objects or callable instances. A name maps to <code>None</code>, which checks only that the tool is offered. Anything else raises <code>TypeError</code>.</p>
+<div id="80c93c50" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.106649+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.109173+00:00&quot;,&quot;total&quot;:0.0025259989999995014}}" data-execution_count="32">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functools <span class="im">import</span> partial</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> expect_fail</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Runner:</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__call__</span>(<span class="va">self</span>, command, cwd<span class="op">=</span><span class="st">'.'</span>, timeout<span class="op">=</span><span class="dv">60</span>): ...</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> as_tools([<span class="st">'run_shell'</span>]) <span class="op">==</span> {<span class="st">'run_shell'</span>: <span class="va">None</span>} <span class="kw">and</span> warm_start([<span class="st">'run_shell'</span>], dirs<span class="op">=</span>[SEEDS_DIR]) <span class="op">==</span> msgs</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> warm_start([partial(run_shell, timeout<span class="op">=</span><span class="dv">30</span>)], dirs<span class="op">=</span>[SEEDS_DIR]) <span class="op">==</span> msgs</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">list</span>(as_tools([Runner()])) <span class="op">==</span> [<span class="st">'Runner'</span>] <span class="kw">and</span> round_valid(seed, {<span class="st">'run_shell'</span>: Runner()})</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">list</span>(as_tools([partial(Runner(), timeout<span class="op">=</span><span class="dv">1</span>)])) <span class="op">==</span> [<span class="st">'Runner'</span>]</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">TypeError</span>, <span class="st">'tools must be'</span>): as_tools([<span class="dv">1</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The <code>fossick-github</code> seed reproduces, message for message, the demonstration that was hard-coded before seeds existed.</p>
+<div id="eb89df91" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>tc <span class="op">=</span> ToolCall(<span class="st">'run_shell'</span>, {</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">'command'</span>: <span class="st">"fossick read-gh-repo https://github.com/AnswerDotAI/llmdojo --globs 'README*,llmdojo/*.py,pyproject.toml' --limit 30"</span>,</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">'cwd'</span>: <span class="st">'.'</span>, <span class="st">'timeout'</span>: <span class="dv">120</span>}, <span class="bu">id</span><span class="op">=</span><span class="st">'call_fossick'</span>)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> msgs <span class="op">==</span> [</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'role'</span>: <span class="st">'user'</span>, <span class="st">'content'</span>: <span class="st">'Use FOSSICK to research the AnswerDotAI llmdojo GitHub repository.'</span>},</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'role'</span>: <span class="st">'assistant'</span>, <span class="st">'content'</span>: <span class="st">'The request names a GitHub repository and FOSSICK, so use its repository reader first.'</span>, <span class="st">'tool_calls'</span>: [tc]},</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>    mk_tool_res_msg(tc, <span class="st">'# llmdojo</span><span class="ch">\n</span><span class="st">LLM coding agents imitate what their context shows.'</span>),</span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>    {<span class="st">'role'</span>: <span class="st">'assistant'</span>, <span class="st">'content'</span>: <span class="st">'FOSSICK read the repository directly. I will use its source files as the evidence.'</span>},</span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> msgs[<span class="dv">2</span>][<span class="st">'tool_call_id'</span>] <span class="op">==</span> msgs[<span class="dv">1</span>][<span class="st">'tool_calls'</span>][<span class="dv">0</span>][<span class="st">'id'</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The <code>approval-refused</code> seed shows the right response to a refused write: the assistant names the refused action and asks one question instead of trying again. Its calls bind to shalya’s <code>view_file(path, start, end)</code> and <code>replace_text(path, edits)</code>, so it is replayed only when those tools are offered. The other seeds each teach one route on the shalya 0.1.0 and ramabana 0.2.0 tool set. <code>git-flow</code> uses the git tools, and its commit result carries an <code>undo</code> token. <code>search-choice</code> picks between semantic search, literal search and a listing. <code>notebook-edit</code> edits notebook cells by id. <code>memory-key</code> shows that a note saved under an existing <code>key</code> replaces the old one, and <code>delegation</code> confirms a sub-agent’s report by reading the lines it cites. Every seed has a <code>rank</code>, so a small <code>limit</code> still picks the most useful lessons.</p>
+<div id="c94837e0" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.111913+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.136546+00:00&quot;,&quot;total&quot;:0.024636751000002732}}" data-execution_count="33">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> test_eq</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> view_file(path: <span class="bu">str</span>, start: <span class="bu">int</span> <span class="op">=</span> <span class="dv">0</span>, end: <span class="bu">int</span> <span class="op">=</span> <span class="dv">0</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> replace_text(path: <span class="bu">str</span>, edits: <span class="bu">list</span>[<span class="bu">dict</span>]) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> git_status(path: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> git_diff(staged: <span class="bu">bool</span> <span class="op">=</span> <span class="va">False</span>, path: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> git_commit(message: <span class="bu">str</span>, paths: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, amend: <span class="bu">bool</span> <span class="op">=</span> <span class="va">False</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> git_divergence(against: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, path: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> git_remote(op: <span class="bu">str</span> <span class="op">=</span> <span class="st">'fetch'</span>, publish: <span class="bu">bool</span> <span class="op">=</span> <span class="va">False</span>, path: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> notebook_cells(path: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> view_cell(path: <span class="bu">str</span>, cell_id: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> edit_cell(path: <span class="bu">str</span>, cell_id: <span class="bu">str</span>, edits: <span class="bu">list</span>[<span class="bu">dict</span>]) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> search_code(query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> grep(pattern: <span class="bu">str</span>, path_filter: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, regex: <span class="bu">bool</span> <span class="op">=</span> <span class="va">True</span>, ignore_case: <span class="bu">bool</span> <span class="op">=</span> <span class="va">False</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ls(path: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, pattern: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, recursive: <span class="bu">bool</span> <span class="op">=</span> <span class="va">False</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> remember(text: <span class="bu">str</span>, title: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, tags: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, key: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> memory_search(query: <span class="bu">str</span>, limit: <span class="bu">int</span> <span class="op">=</span> <span class="dv">8</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> delegate_search(questions: <span class="bu">list</span>[<span class="bu">str</span>], skills: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>, cloud_model: <span class="bu">str</span> <span class="op">=</span> <span class="st">''</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>ALL <span class="op">=</span> [view_file, replace_text, run_shell, git_status, git_diff, git_commit, git_divergence, git_remote, notebook_cells, view_cell, edit_cell, search_code, grep, ls, remember, memory_search, delegate_search]</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>seeds <span class="op">=</span> {r[<span class="st">'meta'</span>][<span class="st">'name'</span>]: r <span class="cf">for</span> r <span class="kw">in</span> load_rounds([SEEDS_DIR])}</span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">sorted</span>(seeds), [<span class="st">'approval-refused'</span>, <span class="st">'delegation'</span>, <span class="st">'fossick-github'</span>, <span class="st">'git-flow'</span>, <span class="st">'memory-key'</span>, <span class="st">'notebook-edit'</span>, <span class="st">'search-choice'</span>])</span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r <span class="kw">in</span> seeds.values(): <span class="cf">assert</span> round_valid(r, as_tools(ALL)), r[<span class="st">'meta'</span>][<span class="st">'name'</span>]</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r <span class="kw">in</span> seeds.values(): <span class="cf">assert</span> r[<span class="st">'meta'</span>][<span class="st">'status'</span>] <span class="op">==</span> <span class="st">'accepted'</span> <span class="kw">and</span> <span class="bu">sorted</span>(r[<span class="st">'meta'</span>][<span class="st">'tools'</span>]) <span class="op">==</span> <span class="bu">sorted</span>({n <span class="cf">for</span> n, _ <span class="kw">in</span> round_calls(r)}), r[<span class="st">'meta'</span>][<span class="st">'name'</span>]</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> old_replace(path: <span class="bu">str</span>, spec: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>: ...</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> round_valid(seeds[<span class="st">'approval-refused'</span>], as_tools([view_file, old_replace]))          <span class="co"># the old dialect no longer binds</span></span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> round_valid(seeds[<span class="st">'git-flow'</span>], as_tools([git_status, git_diff, git_divergence]))     <span class="co"># no git_commit: the round is stale for a read-only agent</span></span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(<span class="bu">next</span>(a <span class="cf">for</span> n, a <span class="kw">in</span> round_calls(seeds[<span class="st">'git-flow'</span>]) <span class="cf">if</span> n <span class="op">==</span> <span class="st">'git_commit'</span>)[<span class="st">'paths'</span>], <span class="bu">str</span>)</span>
+<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(<span class="bu">next</span>(a <span class="cf">for</span> n, a <span class="kw">in</span> round_calls(seeds[<span class="st">'notebook-edit'</span>]) <span class="cf">if</span> n <span class="op">==</span> <span class="st">'edit_cell'</span>)[<span class="st">'edits'</span>], <span class="bu">list</span>)   <span class="co"># native lists, not JSON strings</span></span>
+<span id="cb39-28"><a href="#cb39-28" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">isinstance</span>(<span class="bu">next</span>(a <span class="cf">for</span> n, a <span class="kw">in</span> round_calls(seeds[<span class="st">'delegation'</span>]) <span class="cf">if</span> n <span class="op">==</span> <span class="st">'delegate_search'</span>)[<span class="st">'questions'</span>], <span class="bu">list</span>)</span>
+<span id="cb39-29"><a href="#cb39-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Review Focus 3: a read-only offering keeps only the rounds whose every call binds</span></span>
+<span id="cb39-30"><a href="#cb39-30" aria-hidden="true" tabindex="-1"></a>ro <span class="op">=</span> warm_start([search_code, grep, ls, view_file], dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb39-31"><a href="#cb39-31" aria-hidden="true" tabindex="-1"></a>test_eq([tc.name <span class="cf">for</span> m <span class="kw">in</span> ro <span class="cf">if</span> m.get(<span class="st">'tool_calls'</span>) <span class="cf">for</span> tc <span class="kw">in</span> m[<span class="st">'tool_calls'</span>]], [<span class="st">'search_code'</span>, <span class="st">'grep'</span>, <span class="st">'ls'</span>])</span>
+<span id="cb39-32"><a href="#cb39-32" aria-hidden="true" tabindex="-1"></a><span class="co"># rank orders the library; limit cuts it</span></span>
+<span id="cb39-33"><a href="#cb39-33" aria-hidden="true" tabindex="-1"></a>top <span class="op">=</span> warm_start(ALL, dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb39-34"><a href="#cb39-34" aria-hidden="true" tabindex="-1"></a>test_eq([tc.name <span class="cf">for</span> m <span class="kw">in</span> top <span class="cf">if</span> m.get(<span class="st">'tool_calls'</span>) <span class="cf">for</span> tc <span class="kw">in</span> m[<span class="st">'tool_calls'</span>]][:<span class="dv">1</span>], [<span class="st">'git_status'</span>])</span>
+<span id="cb39-35"><a href="#cb39-35" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">len</span>(warm_start(ALL, dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">1</span>)) <span class="op">==</span> <span class="bu">len</span>([m <span class="cf">for</span> m <span class="kw">in</span> round_msgs(seeds[<span class="st">'git-flow'</span>])])</span>
+<span id="cb39-36"><a href="#cb39-36" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">sorted</span>(r[<span class="st">'meta'</span>][<span class="st">'rank'</span>] <span class="cf">for</span> r <span class="kw">in</span> seeds.values()), [<span class="dv">10</span>, <span class="dv">20</span>, <span class="dv">30</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">50</span>, <span class="dv">60</span>])   <span class="co"># every seed carries a rank</span></span>
+<span id="cb39-37"><a href="#cb39-37" aria-hidden="true" tabindex="-1"></a><span class="co"># the git round teaches undo: the commit result carries a token, the push does not</span></span>
+<span id="cb39-38"><a href="#cb39-38" aria-hidden="true" tabindex="-1"></a>commit <span class="op">=</span> <span class="bu">next</span>(m <span class="cf">for</span> m <span class="kw">in</span> round_msgs(seeds[<span class="st">'git-flow'</span>]) <span class="cf">if</span> m[<span class="st">'role'</span>] <span class="op">==</span> <span class="st">'tool'</span> <span class="kw">and</span> <span class="st">'"undo"'</span> <span class="kw">in</span> m[<span class="st">'content'</span>] <span class="kw">and</span> <span class="st">'sp_'</span> <span class="kw">in</span> m[<span class="st">'content'</span>])</span>
+<span id="cb39-39"><a href="#cb39-39" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> json.loads(commit[<span class="st">'content'</span>])[<span class="st">'moved'</span>] <span class="kw">is</span> <span class="va">True</span></span>
+<span id="cb39-40"><a href="#cb39-40" aria-hidden="true" tabindex="-1"></a>push <span class="op">=</span> <span class="bu">next</span>(m <span class="cf">for</span> m <span class="kw">in</span> round_msgs(seeds[<span class="st">'git-flow'</span>]) <span class="cf">if</span> m[<span class="st">'role'</span>] <span class="op">==</span> <span class="st">'tool'</span> <span class="kw">and</span> <span class="st">'pushed'</span> <span class="kw">in</span> m[<span class="st">'content'</span>])</span>
+<span id="cb39-41"><a href="#cb39-41" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> json.loads(push[<span class="st">'content'</span>])[<span class="st">'undo'</span>] <span class="op">==</span> <span class="st">''</span></span>
+<span id="cb39-42"><a href="#cb39-42" aria-hidden="true" tabindex="-1"></a><span class="co"># the approval round still ends by asking once</span></span>
+<span id="cb39-43"><a href="#cb39-43" aria-hidden="true" tabindex="-1"></a>rounds <span class="op">=</span> warm_start([view_file, replace_text], dirs<span class="op">=</span>[SEEDS_DIR])</span>
+<span id="cb39-44"><a href="#cb39-44" aria-hidden="true" tabindex="-1"></a>denied <span class="op">=</span> [m <span class="cf">for</span> m <span class="kw">in</span> rounds <span class="cf">if</span> m[<span class="st">'role'</span>] <span class="op">==</span> <span class="st">'tool'</span> <span class="kw">and</span> m[<span class="st">'content'</span>].startswith(<span class="st">'Denied by human operator'</span>)]</span>
+<span id="cb39-45"><a href="#cb39-45" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">len</span>(denied) <span class="op">==</span> <span class="dv">1</span> <span class="kw">and</span> <span class="st">'Reason given: no answer after 300s'</span> <span class="kw">in</span> denied[<span class="dv">0</span>][<span class="st">'content'</span>]</span>
+<span id="cb39-46"><a href="#cb39-46" aria-hidden="true" tabindex="-1"></a>final <span class="op">=</span> rounds[rounds.index(denied[<span class="dv">0</span>]) <span class="op">+</span> <span class="dv">1</span>]</span>
+<span id="cb39-47"><a href="#cb39-47" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> final[<span class="st">'role'</span>] <span class="op">==</span> <span class="st">'assistant'</span> <span class="kw">and</span> final[<span class="st">'content'</span>].count(<span class="st">'?'</span>) <span class="op">==</span> <span class="dv">1</span> <span class="kw">and</span> <span class="st">'nothing changed'</span> <span class="kw">in</span> final[<span class="st">'content'</span>]</span>
+<span id="cb39-48"><a href="#cb39-48" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> rounds[<span class="op">-</span><span class="dv">1</span>] <span class="kw">is</span> final</span>
+<span id="cb39-49"><a href="#cb39-49" aria-hidden="true" tabindex="-1"></a><span class="co"># equal rank: library rounds (listed first) precede a seed; a same-model round wins the tie</span></span>
+<span id="cb39-50"><a href="#cb39-50" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> copy_of(r, name, model<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb39-51"><a href="#cb39-51" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">'meta'</span>: {<span class="op">**</span>r[<span class="st">'meta'</span>], <span class="st">'name'</span>: name, <span class="st">'model'</span>: model}, <span class="st">'history'</span>: [{<span class="st">'role'</span>: <span class="st">'user'</span>, <span class="st">'content'</span>: [{<span class="st">'type'</span>: <span class="st">'text'</span>, <span class="st">'text'</span>: name}]}] <span class="op">+</span> r[<span class="st">'history'</span>][<span class="dv">1</span>:]}</span>
+<span id="cb39-52"><a href="#cb39-52" aria-hidden="true" tabindex="-1"></a>users <span class="op">=</span> <span class="kw">lambda</span> ms: [m[<span class="st">'content'</span>] <span class="cf">for</span> m <span class="kw">in</span> ms <span class="cf">if</span> m[<span class="st">'role'</span>] <span class="op">==</span> <span class="st">'user'</span>]</span>
+<span id="cb39-53"><a href="#cb39-53" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> users(round_msgs(seeds[<span class="st">'search-choice'</span>]))[<span class="dv">0</span>]</span>
+<span id="cb39-54"><a href="#cb39-54" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> TemporaryDirectory() <span class="im">as</span> d:</span>
+<span id="cb39-55"><a href="#cb39-55" aria-hidden="true" tabindex="-1"></a>    (Path(d)<span class="op">/</span><span class="st">'mine.json'</span>).write_text(json.dumps(copy_of(seeds[<span class="st">'search-choice'</span>], <span class="st">'mine'</span>)))</span>
+<span id="cb39-56"><a href="#cb39-56" aria-hidden="true" tabindex="-1"></a>    (Path(d)<span class="op">/</span><span class="st">'theirs.json'</span>).write_text(json.dumps(copy_of(seeds[<span class="st">'search-choice'</span>], <span class="st">'theirs'</span>, <span class="st">'m1'</span>)))</span>
+<span id="cb39-57"><a href="#cb39-57" aria-hidden="true" tabindex="-1"></a>    test_eq(users(warm_start(ALL, dirs<span class="op">=</span>[d, SEEDS_DIR], limit<span class="op">=</span><span class="dv">4</span>))[<span class="dv">1</span>:], [<span class="st">'mine'</span>, q, <span class="st">'theirs'</span>])</span>
+<span id="cb39-58"><a href="#cb39-58" aria-hidden="true" tabindex="-1"></a>    test_eq(users(warm_start(ALL, model<span class="op">=</span><span class="st">'m1'</span>, dirs<span class="op">=</span>[d, SEEDS_DIR], limit<span class="op">=</span><span class="dv">4</span>))[<span class="dv">1</span>:], [<span class="st">'theirs'</span>, <span class="st">'mine'</span>, q])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://Karthik777.github.io/drona/core.html#fit_rounds"><code>fit_rounds</code></a> does the selection for <a href="https://Karthik777.github.io/drona/core.html#warm_start"><code>warm_start</code></a>, and also returns every accepted round it left out with the reason: a tool that is not offered, a call that no longer binds to the offered signature, or the <code>limit</code>. A warm-start screen can show those reasons to a person, who can then act on them.</p>
+<div id="3becbc4b" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>used, skipped <span class="op">=</span> fit_rounds([search_code, grep, ls, view_file], dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>test_eq([r[<span class="st">'meta'</span>][<span class="st">'name'</span>] <span class="cf">for</span> r <span class="kw">in</span> used], [<span class="st">'search-choice'</span>])</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>why <span class="op">=</span> {r[<span class="st">'meta'</span>][<span class="st">'name'</span>]: w <span class="cf">for</span> r, w <span class="kw">in</span> skipped}</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>test_eq(<span class="bu">sorted</span>(why), [<span class="st">'approval-refused'</span>, <span class="st">'delegation'</span>, <span class="st">'fossick-github'</span>, <span class="st">'git-flow'</span>, <span class="st">'memory-key'</span>, <span class="st">'notebook-edit'</span>])</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>test_eq(why[<span class="st">'approval-refused'</span>], <span class="st">'tool replace_text is not offered here'</span>)</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>test_eq(why[<span class="st">'git-flow'</span>], <span class="st">'tool git_status is not offered here'</span>)</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>used, skipped <span class="op">=</span> fit_rounds({<span class="st">'view_file'</span>: view_file, <span class="st">'replace_text'</span>: old_replace}, dirs<span class="op">=</span>[SEEDS_DIR])   <span class="co"># the old dialect, offered under the real name</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> used <span class="op">==</span> [] <span class="kw">and</span> <span class="bu">dict</span>((r[<span class="st">'meta'</span>][<span class="st">'name'</span>], w) <span class="cf">for</span> r, w <span class="kw">in</span> skipped)[<span class="st">'approval-refused'</span>].startswith(<span class="st">'replace_text(path, edits) does not match this signature: '</span>)</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'edits'</span> <span class="kw">in</span> <span class="bu">dict</span>((r[<span class="st">'meta'</span>][<span class="st">'name'</span>], w) <span class="cf">for</span> r, w <span class="kw">in</span> skipped)[<span class="st">'approval-refused'</span>]</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>used, skipped <span class="op">=</span> fit_rounds(ALL, dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>test_eq([r[<span class="st">'meta'</span>][<span class="st">'name'</span>] <span class="cf">for</span> r <span class="kw">in</span> used], [<span class="st">'git-flow'</span>])</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>test_eq({w <span class="cf">for</span> _, w <span class="kw">in</span> skipped}, {<span class="st">'over the limit of 1'</span>}) <span class="kw">and</span> test_eq(<span class="bu">len</span>(skipped), <span class="dv">6</span>)</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>test_eq([r[<span class="st">'meta'</span>][<span class="st">'name'</span>] <span class="cf">for</span> r, _ <span class="kw">in</span> skipped][:<span class="dv">2</span>], [<span class="st">'search-choice'</span>, <span class="st">'notebook-edit'</span>])   <span class="co"># skipped rounds keep the ranking too</span></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> fit_rounds(dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">7</span>)[<span class="dv">1</span>] <span class="op">==</span> []   <span class="co"># no tools offered, room for every seed: nothing is skipped</span></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> warm_start(ALL, dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">3</span>) <span class="op">==</span> [m <span class="cf">for</span> r <span class="kw">in</span> fit_rounds(ALL, dirs<span class="op">=</span>[SEEDS_DIR], limit<span class="op">=</span><span class="dv">3</span>)[<span class="dv">0</span>] <span class="cf">for</span> m <span class="kw">in</span> round_msgs(r)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://Karthik777.github.io/drona/core.html#register_completion"><code>register_completion</code></a> records a completion receipt: a new id stamped with the package version and <code>ROUND_REVISION</code>. <a href="https://Karthik777.github.io/drona/core.html#completion_valid"><code>completion_valid</code></a> accepts the id only while both are unchanged, so a receipt from an older round fails.</p>
+<div id="5bab2657" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.137947+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.139883+00:00&quot;,&quot;total&quot;:0.0019386990000214155}}" data-execution_count="34">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tempfile</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>state <span class="op">=</span> Path(tempfile.mkdtemp())<span class="op">/</span><span class="st">'completions.json'</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>cid <span class="op">=</span> register_completion(state)<span class="op">;</span> <span class="bu">print</span>(cid)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> completion_valid(cid, state)</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>old <span class="op">=</span> json.loads(state.read_text())<span class="op">;</span> <span class="bu">print</span>(old)</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>old[cid][<span class="st">'version'</span>] <span class="op">=</span> <span class="st">'old:0'</span></span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>state.write_text(json.dumps(old))</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> completion_valid(cid, state)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>ccec52da7ce9474fafb7e804d6aff686
+{'ccec52da7ce9474fafb7e804d6aff686': {'version': '0.1.18:1', 'at': 1792705375.1389332}}</code></pre>
+</div>
+</div>
+<div id="32983762" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.141300+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.144769+00:00&quot;,&quot;total&quot;:0.0034879920000037146}}" data-execution_count="36">
+<hr>
+<p><a href="https://github.com/Karthik777/drona/blob/main/dhrona/core.py#L278" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="main" class="level3">
+<h3 class="anchored" data-anchor-id="main">main</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> main(</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    history:<span class="bu">str</span><span class="op">=</span><span class="st">'/home/runner/.config/ramabana/agent-history.jsonl'</span>, <span class="co"># Ramabana history path</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    session:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># optional session id</span></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Score the tool routes in a Ramabana history and print them as JSON.</em></p>
+</section>
+</div>
+<p><code>dhrona</code> prints the assessment of a history as JSON. When the history file is missing it exits with a one-line message.</p>
+<div id="4a301e99" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-10-22T21:42:55.144925+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-10-22T21:42:55.145635+00:00&quot;,&quot;total&quot;:0.0007136060000050293}}" data-execution_count="37">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> expect_fail</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">SystemExit</span>, <span class="st">'No history at'</span>): main(history<span class="op">=</span><span class="st">'/nonexistent/agent-history.jsonl'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/Karthik777\.github\.io\/drona");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/Karthik777/drona/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
