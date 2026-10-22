@@ -850,7 +850,8 @@ def history_health(
                 if win == 'previous': g['previous'] += 1; continue
                 g['count'] += 1
                 if g['count'] == 1: g['raw'] = text[:1000]
-                if len(g['examples']) < 3: g['examples'].append(dict(session=t.get('session'), at=at))
+                if len(g['examples']) < 3 and t.get('session') not in {e['session'] for e in g['examples']}:
+                    g['examples'].append(dict(session=t.get('session'), at=at))
     return dict(log_bytes=p.stat().st_size, per_day=per_day, largest=largest, days=days, now=now,
                 groups=sorted(groups.values(), key=lambda g: (-g['count'], -g['previous']))[:top],
                 guard_refusals=tally['guard_refusals'], repeats=tally['repeats'], no_state=tally['no_state'])

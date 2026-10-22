@@ -2,6 +2,10 @@
 
 <!-- do not remove -->
 
+## 0.1.18
+
+- A `history_health` group's examples name up to three distinct sessions. Before, one session failing three times filled every slot, so an issue draft showed the same call three times.
+
 ## 0.1.17
 
 - An untracked hidden path in the learned folder, such as a `.kosha/` code index, no longer stops a batch, and `learned_repo` excludes `.kosha/` in new repos. A modified tracked file still does.
