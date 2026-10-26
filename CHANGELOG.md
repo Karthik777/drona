@@ -2,7 +2,7 @@
 
 <!-- do not remove -->
 
-## Unreleased
+## 0.1.19
 
 - Uncommitted files in the learned folder never stop a batch, a round's keep or a compaction. Before, `improve_batch`, `learned_repo` and `_compact` raised `has uncommitted changes; commit or discard them`, which refused a whole night. Dhrona never stages, commits or discards a person's edit.
 - A round keeps a lesson as an entry in `dhrona-<date>.md`, one file a day (`keep_lesson`, `lesson_entry`). The entry holds the request and the round's notes, with no diff. `keep_lesson` commits the file as Dhrona on a new `pending/` branch, as `keep` did for a candidate, so a person accepts it with `ramabana-learned accept`. It does not check the branch out and does not touch the learned folder's branch, index or files. A second lesson on the same day goes on its own branch, whose file holds both entries. The round's report names the branch as `pending`.
