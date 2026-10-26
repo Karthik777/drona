@@ -2,6 +2,16 @@
 
 <!-- do not remove -->
 
+## Unreleased
+
+- Uncommitted files in the learned folder never stop a batch, a round's keep or a compaction. Before, `improve_batch`, `learned_repo` and `_compact` raised `has uncommitted changes; commit or discard them`, which refused a whole night. Dhrona never stages, commits or discards a person's edit.
+- A round keeps a lesson as an entry in `dhrona-<date>.md`, one file a day (`keep_lesson`, `lesson_entry`). The entry holds the request and the round's notes, with no diff. `keep_lesson` commits the file as Dhrona on a new `pending/` branch, as `keep` did for a candidate, so a person accepts it with `ramabana-learned accept`. It does not check the branch out and does not touch the learned folder's branch, index or files. A second lesson on the same day goes on its own branch, whose file holds both entries. The round's report names the branch as `pending`.
+- Replays start from the learned folder's committed HEAD (`committed_copy`), so a replay never sees uncommitted text.
+- `LEARNED_MAX` (2,000) counts `AGENTS.md` alone, as before. Dated learning files have their own limit, `DATED_MAX` (4,000 characters across all of them). A lesson that would pass it is not kept, and the round's `problems` says so.
+- `expire_dated` removes each dated learning file over `DATED_DAYS` (30) days old, with `git rm` and a commit of that path alone as Dhrona. `expire_learned` calls it, and it works on a folder with uncommitted changes. The `AGENTS.md` and skill expiry still skips a folder with uncommitted changes, and now stages and commits only the paths it changed, not everything (`git add -A`).
+- A fixed-defects record, `~/.config/dhrona/fixed.json`, keyed by the issue draft's slug, holds when a fix was made, a note and an optional quick check, a shell command or a `module:callable` path. `record_fix` and the `dhrona-fixed` command write it. `history_health(fixed=...)` counts only occurrences after the fix, `health_findings` reports a recurrence as `recurred after fix`, and `nightly` runs each check once before the batch and lists failures in the note. Issue drafts name their slug and the command.
+- `committed_copy` no longer fails on a learned folder whose HEAD has no files.
+
 ## 0.1.18
 
 - A `history_health` group's examples name up to three distinct sessions. Before, one session failing three times filled every slot, so an issue draft showed the same call three times.
