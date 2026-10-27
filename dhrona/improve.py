@@ -76,6 +76,7 @@ def run_turn(
     exe=RAMABANA,
     timeout=1800,    # seconds before the run is abandoned
     read_outside=False, # reads may name any path, as in an interactive session; writes stay in `roots`
+    max_cost=None,   # dollars this turn may spend
 ):
     "Run one Ramabana turn with no interface and return its history row: `prompt`, `activity`, `reply`, `usage`."
     cfg = Path(cfg)
@@ -83,7 +84,7 @@ def run_turn(
     if learned is not None: shutil.copytree(learned, cfg/'learned', ignore=_HIDDEN)
     cmd = [exe, '--root', ','.join(map(str, roots)), '--cfg', str(cfg), '--approve', approve,
            '--no-web', '--tmux', 'off', '--pane', 'off', *(['--read-outside'] if read_outside else []),
-           *(['--model', model] if model else []), prompt]
+           *(['--model', model] if model else []), *(['--max-cost', f'{max_cost:.2f}'] if max_cost is not None else []), prompt]
     with subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=os.name != 'nt') as p:
         try: _, err = p.communicate(timeout=timeout)
         except BaseException as e:   # a beat's own deadline as well as ours: what the run started dies with it
@@ -92,7 +93,9 @@ def run_turn(
             raise
     (cfg/'run.log').write_text(f'exit {p.returncode}\n\n{err}')
     hist = cfg/'agent-history.jsonl'
-    if not hist.exists() or not (turns := read_history(hist)): raise RuntimeError(f'no turn was recorded; see {cfg/"run.log"}')
+    if not hist.exists() or not (turns := read_history(hist)):
+        line = next((line.strip() for line in err.splitlines() if line.strip()), '')[:300]
+        raise RuntimeError(f'no turn was recorded (exit {p.returncode}): {line}; see {cfg/"run.log"}')
     return turns[-1]
 
 # %% ../nbs/04_improve.ipynb #cc0adc8d
@@ -351,12 +354,13 @@ def judge_reply(
     model=None,     # the model that judges
     exe=RAMABANA,
     original=None,  # the person's own turn for this request, whose commands show what the work needed
+    max_cost=None,  # dollars the judge's turn may spend
 ):
     "Ask a judge model whether `cand`'s reply is at least as good as the best of `bases`, and return `(kept, reply)`."
     prompt = scrub(judge_prompt(request, cand, bases, original)[0])   # the judge sees no personal detail
     folder = Path(folder)
     folder.mkdir(parents=True)
-    t = run_turn(prompt, [folder], folder/'cfg', model, exe=exe)
+    t = run_turn(prompt, [folder], folder/'cfg', model, exe=exe, max_cost=max_cost)
     if not delivered(t): raise RuntimeError(f"the judge gave no answer: {t.get('error') or t.get('reply') or ''}")
     return _says_yes(t['reply']), t['reply']
 
@@ -400,7 +404,7 @@ def improve_round(
     else: current.mkdir(parents=True)
     if (bad := check_learned(current)): raise ValueError(f'{learned} holds files a learned folder may not: {bad}')
     def run(name, folder): return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, approve, exe=exe,
-                                           timeout=timeout, read_outside=read_outside)
+                                           timeout=timeout, read_outside=read_outside, max_cost=max(limit - round_cost(work), 0))
     bases = []
     for n in range(1, k+1):
         bases.append(run(f'base-{n}', current))
@@ -426,7 +430,7 @@ def improve_round(
     if lessons: (ev/'lessons.md').write_text(scrub(lessons_md(lessons)))
     shutil.copytree(current, cand, ignore=_HIDDEN)
     try: edit = run_turn(MISSION.format(candidate=cand, evidence=ev, mx=LEARNED_MAX), [cand, ev], work/'editor'/'cfg', editor,
-                         approve='edits', exe=exe)
+                         approve='edits', exe=exe, max_cost=max(limit - round_cost(work), 0))
     except RuntimeError as e: edit = dict(error=str(e))
     editor_error = edit.get('error') or (None if delivered(edit) else f"the editor gave no answer: {edit.get('reply') or ''}")
     report |= dict(notes=scrub(edit.get('reply')), editor_error=editor_error, editor_cost=_usage(edit).get('cost'),
@@ -440,7 +444,8 @@ def improve_round(
             report['candidate'] = _summary(c)
             if capped(): return report
             if better(c, bases):   # a cheaper route counts only if the answer is as good
-                try: report['adopted'], report['judge'] = judge_reply(prompt, c, bases, work/'judge', editor, exe, original)
+                try: report['adopted'], report['judge'] = judge_reply(prompt, c, bases, work/'judge', editor, exe, original,
+                                                                  max_cost=max(limit - round_cost(work), 0))
                 except RuntimeError as e: report['judge_error'] = str(e)
             if report['adopted'] and learned is not None:
                 routes = ', '.join(str(b['route']) for b in report['bases'])
@@ -589,7 +594,8 @@ def improve_batch(
             row = dict(session=s['session'], prompt=s['prompt'], model=model or s['model'])
             try:
                 r = improve_round(s['prompt'], s['start'], work/s['session'], learned, row['model'], editor, k, approve, exe, read_outside,
-                                  original=s.get('turn'), lessons=lessons, timeout=timeout)
+                                  original=s.get('turn'), lessons=lessons, timeout=timeout,
+                                  limit=max(min(ROUND_LIMIT, budget - spent), 0) if budget is not None else ROUND_LIMIT)
                 row |= dict(adopted=r['adopted'], pending=r.get('pending'), changed=r.get('changed'), problems=r.get('problems'),
                             bases=[b['route'] for b in r['bases']], candidate=(r.get('candidate') or {}).get('route'), judge=r.get('judge'),
                             error=r.get('base_error') or r.get('editor_error') or r.get('candidate_error') or r.get('judge_error') or r.get('cost_limit') or None)
