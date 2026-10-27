@@ -18,7 +18,7 @@ classifiers = [
 dependencies = ["fastcore>=2.1.16", "aidialog>=0.0.22", "uraiyadal>=0.0.1", "llmsurgery>=0.0.13",
                 "shalya>=0.1.14",   # `parse_lesson`, `lesson_text`
                 "rahasya>=0.0.5",   # `redact`, before the editor and the judge
-                "ramabana>=0.2.60"]   # `hydrate_turns`: tool results over 600 characters, whole from the details file
+                "ramabana>=0.2.80"]   # `--max-cost`, which every replay is given; `hydrate_turns` since 0.2.60
 
 [project.scripts]
 dhrona = "dhrona.core:main"

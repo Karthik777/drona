@@ -2,6 +2,12 @@
 
 <!-- do not remove -->
 
+## 0.1.20
+
+- Each replay, editor and judge run gets `--max-cost`: the dollars left in its round's limit (`ROUND_LIMIT`, $8) or in the night's `budget`, whichever is smaller. Ramabana stops the turn after the model step that passes it. Before, both limits were checked only between runs, so one replay cost $20.94 against an $8 limit and a $20 night.
+- A run that records no turn says why: `no turn was recorded (exit 1): The turn model, gpt, cannot run here: needs OPENAI_API_KEY ...`. Before, the error named only the run log. `night_error` still turns that into its hint to set the schedule's `model`.
+- Needs ramabana 0.2.80, the first release with `--max-cost`.
+
 ## 0.1.19
 
 - Uncommitted files in the learned folder never stop a batch, a round's keep or a compaction. Before, `improve_batch`, `learned_repo` and `_compact` raised `has uncommitted changes; commit or discard them`, which refused a whole night. Dhrona never stages, commits or discards a person's edit.
