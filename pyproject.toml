@@ -19,7 +19,7 @@ dependencies = ["fastcore>=2.1.16", "uraiyadal>=0.0.1", "llmsurgery>=0.0.13",
                 "aidialog>=0.0.22,<0.0.38",   # 0.0.38 moves `aidialog.hist` to aihist, which is not on PyPI and which llmsurgery does not use yet
                 "shalya>=0.1.14",   # `parse_lesson`, `lesson_text`
                 "rahasya>=0.0.5",   # `redact`, before the editor and the judge
-                "ramabana>=0.2.80"]   # `--max-cost`, which every replay is given; `hydrate_turns` since 0.2.60
+                "ramabana>=0.2.81"]   # `--no-read-outside` and `--no-vault`, which every replay is given; `--max-cost` since 0.2.80
 
 [project.scripts]
 dhrona = "dhrona.core:main"

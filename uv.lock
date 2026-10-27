@@ -985,7 +985,7 @@ requires-dist = [
     { name = "fastcore", specifier = ">=2.1.16" },
     { name = "llmsurgery", specifier = ">=0.0.13" },
     { name = "rahasya", specifier = ">=0.0.5" },
-    { name = "ramabana", specifier = ">=0.2.80" },
+    { name = "ramabana", specifier = ">=0.2.81" },
     { name = "shalya", specifier = ">=0.1.14" },
     { name = "uraiyadal", specifier = ">=0.0.1" },
 ]
@@ -3718,7 +3718,7 @@ wheels = [
 
 [[package]]
 name = "ramabana"
-version = "0.2.80"
+version = "0.2.81"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exhash" },
@@ -3732,9 +3732,9 @@ dependencies = [
     { name = "shalya" },
     { name = "uraiyadal" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/28/6c/39ae59797d10b9760ad1ba4121a3dcd49dad5dc5c17fea1f3287167cc08b/ramabana-0.2.80.tar.gz", hash = "sha256:a9181d179588a0e653a32725f2db7141895ba4471533209e82c0eb7dfcac7c78", size = 347108, upload-time = "2026-10-27T03:06:27.522Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/81/5badf49dd1e8a7e013f70a25ee9754a84d64e88bcbb8855f9b243fea9eac/ramabana-0.2.81.tar.gz", hash = "sha256:3971ae0d94976a4c118c31599a8c6bd97f38c1a3d1f1800a833d0ad7a05693b7", size = 347712, upload-time = "2026-10-27T11:13:07.378Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/fb/ad93aa3635a5521b0f5f51b73f58a3081bc6f2c5a9906a68fe4f40b87a36/ramabana-0.2.80-py3-none-any.whl", hash = "sha256:6d03189618c7c0e6e73bc82d44295da871ea742994cd4e7368e2a26970a43fb4", size = 346980, upload-time = "2026-10-27T03:06:25.953Z" },
+    { url = "https://files.pythonhosted.org/packages/da/99/1e76af01552803ac8f18831f528a13845a59d80a3d6a10af5192a6db48bc/ramabana-0.2.81-py3-none-any.whl", hash = "sha256:335c2b73db251518bbaa8e2a01f8443ef794b4a3513c54a489200b0c34376649", size = 347492, upload-time = "2026-10-27T11:13:05.685Z" },
 ]
 
 [[package]]

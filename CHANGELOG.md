@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.21
+
+- Each replay passes `--no-vault`, and `--no-read-outside` or `--read-outside`, on its command line. A person's `config.toml` can turn reads outside the folders and the vault on for their own sessions, and these flags keep those defaults out of replays.
+- aidialog is held below 0.0.38. That release moves `aidialog.hist` to aihist, which is not on PyPI, and llmsurgery still imports `aidialog.hist`.
+- The defect-report test reads its own empty `fixed.json`, so a person's record of fixed defects cannot fail it.
+- Needs ramabana 0.2.81, the first release with `--no-read-outside` and `--no-vault`.
+
 ## 0.1.20
 
 - Each replay, editor and judge run gets `--max-cost`: the dollars left in its round's limit (`ROUND_LIMIT`, $8) or in the night's `budget`, whichever is smaller. Ramabana stops the turn after the model step that passes it. Before, both limits were checked only between runs, so one replay cost $20.94 against an $8 limit and a $20 night.
