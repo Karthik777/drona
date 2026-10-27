@@ -83,7 +83,8 @@ def run_turn(
     cfg.mkdir(parents=True, exist_ok=True)
     if learned is not None: shutil.copytree(learned, cfg/'learned', ignore=_HIDDEN)
     cmd = [exe, '--root', ','.join(map(str, roots)), '--cfg', str(cfg), '--approve', approve,
-           '--no-web', '--tmux', 'off', '--pane', 'off', *(['--read-outside'] if read_outside else []),
+           # Explicit both ways and no vault, so a person's own config.toml defaults can never reach a replay.
+           '--no-web', '--tmux', 'off', '--pane', 'off', '--read-outside' if read_outside else '--no-read-outside', '--no-vault',
            *(['--model', model] if model else []), *(['--max-cost', f'{max_cost:.2f}'] if max_cost is not None else []), prompt]
     with subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=os.name != 'nt') as p:
         try: _, err = p.communicate(timeout=timeout)
