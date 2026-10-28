@@ -6,7 +6,7 @@ Docs: https://Karthik777.github.io/drona/improve.html.md"""
 
 # %% auto #0
 __all__ = ['RAMABANA', 'LEARNED_MAX', 'SCRUB_KINDS', 'DATED', 'DATED_MAX', 'DATED_DAYS', 'PENDING', 'LESSON', 'COMPACT',
-           'MISSION', 'JUDGE', 'ROUND_LIMIT', 'REVIEW', 'TIMES', 'INCLUDES', 'COMPACT_TARGET', 'COMPACTION',
+           'MISSION', 'JUDGE', 'ROUND_LIMIT', 'MIN_RUN', 'REVIEW', 'TIMES', 'INCLUDES', 'COMPACT_TARGET', 'COMPACTION',
            'LOG_MAX_MB', 'LOG_GROWTH_MB', 'DEFECT_MAX', 'ROW_MAX_MB', 'FIXED', 'NIGHTLY', 'FAILED', 'FAILED_TRIES',
            'scrub', 'replay_clone', 'run_turn', 'route_cost', 'delivered', 'better', 'check_learned', 'learned_repo',
            'keep', 'committed_copy', 'lesson_entry', 'keep_lesson', 'trajectory_md', 'findings_md', 'recent_lessons',
@@ -377,6 +377,7 @@ def round_cost(work):
     return sum(c for h in Path(work).glob('*/cfg/agent-history.jsonl') if (ts := read_history(h)) and (c := _usage(ts[-1]).get('cost')))
 
 ROUND_LIMIT = 8   #: dollars: a round stops once the runs it has recorded cost more than this
+MIN_RUN = 0.25    #: dollars a run needs left in the round to start: a Claude Code run reports its cost only at its end, so `--max-cost` cannot stop it in time
 
 def improve_round(
     prompt,         # the request to replay
@@ -408,13 +409,14 @@ def improve_round(
                                            timeout=timeout, read_outside=read_outside, max_cost=max(limit - round_cost(work), 0))
     bases = []
     for n in range(1, k+1):
+        if limit - round_cost(work) < MIN_RUN: break
         bases.append(run(f'base-{n}', current))
-        if round_cost(work) > limit: break
     report = dict(prompt=prompt, start=start, bases=[_summary(b) for b in bases], adopted=False)
     def capped():
-        "Whether the runs so far cost more than `limit`; the report then says so and the round ends."
-        if (spent := round_cost(work)) <= limit: return False
-        report['cost_limit'] = f'the round cost ${spent:.2f}, past its ${limit:g} limit'
+        "Whether the runs so far leave less than `MIN_RUN` of `limit`; the report then says so and the round ends."
+        if limit - (spent := round_cost(work)) >= MIN_RUN: return False
+        report['cost_limit'] = (f'the round cost ${spent:.2f}, past its ${limit:g} limit' if spent > limit else
+                                f'the round cost ${spent:.2f} of its ${limit:g} limit, which leaves less than the ${MIN_RUN:g} a run needs')
         (work/'report.json').write_text(json.dumps(report, indent=1, default=str))
         return True
     if capped(): return report
@@ -566,7 +568,7 @@ def improve_batch(
     approve='edits',   # `ask` refuses every write in a replay
     exe=RAMABANA,      # the Ramabana command a round runs
     read_outside=True, # replays read outside their clone
-    budget=None,       # dollars; no round starts once the rounds so far have cost this much
+    budget=None,       # dollars; no round starts once the rounds so far leave less than `MIN_RUN` of it
     cfg=None,          # Ramabana's config folder: its history gives the lessons and what was used; None reads neither
     days=30,           # lessons from this many days; what Dhrona proposed and nothing used in them expires
     compact_at=None,   # a fraction of `LEARNED_MAX`: past it, a compaction of `AGENTS.md` is proposed before the rounds
@@ -591,7 +593,7 @@ def improve_batch(
         (work/'expired.json').write_text(json.dumps(expired))
         (work/'compaction.json').write_text(json.dumps(compaction))
         for s in picked:
-            if budget is not None and spent >= budget: break
+            if budget is not None and budget - spent < MIN_RUN: break   # a round with less left runs nothing, yet marks its session as tried
             row = dict(session=s['session'], prompt=s['prompt'], model=model or s['model'])
             try:
                 r = improve_round(s['prompt'], s['start'], work/s['session'], learned, row['model'], editor, k, approve, exe, read_outside,
