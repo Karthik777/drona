@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.1.22
+
+- No replay or round starts with less than $0.25 left. A Claude Code run cannot stop exactly at its `--max-cost`, so a run that starts with a few cents left can go past the limit.
+- Needs ramabana 0.2.90. In that release `--max-cost` reaches Claude Code as its own `max_budget_usd`, so a replay stops in time. Before, one replay spent $28.49 against an $8 round limit.
+
 ## 0.1.21
 
 - Each replay passes `--no-vault`, and `--no-read-outside` or `--read-outside`, on its command line. A person's `config.toml` can turn reads outside the folders and the vault on for their own sessions, and these flags keep those defaults out of replays.
