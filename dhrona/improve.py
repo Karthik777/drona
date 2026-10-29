@@ -7,15 +7,16 @@ Docs: https://Karthik777.github.io/drona/improve.html.md"""
 # %% auto #0
 __all__ = ['RAMABANA', 'LEARNED_MAX', 'SCRUB_KINDS', 'DATED', 'DATED_MAX', 'DATED_DAYS', 'PENDING', 'LESSON', 'COMPACT',
            'MISSION', 'JUDGE', 'ROUND_LIMIT', 'MIN_RUN', 'REVIEW', 'TIMES', 'INCLUDES', 'COMPACT_TARGET', 'COMPACTION',
-           'LOG_MAX_MB', 'LOG_GROWTH_MB', 'DEFECT_MAX', 'ROW_MAX_MB', 'FIXED', 'NIGHTLY', 'FAILED', 'FAILED_TRIES',
-           'scrub', 'replay_clone', 'run_turn', 'route_cost', 'delivered', 'better', 'check_learned', 'learned_repo',
-           'keep', 'committed_copy', 'lesson_entry', 'keep_lesson', 'trajectory_md', 'findings_md', 'recent_lessons',
-           'lessons_md', 'refused_commands', 'ran_commands', 'judge_prompt', 'judge_reply', 'round_cost',
-           'improve_round', 'request_text', 'session_start', 'trainable', 'trainable_sessions', 'BatchBusy',
-           'learned_lock', 'improve_batch', 'improve_cli', 'expire_dated', 'expire_learned', 'compaction_prompt',
-           'compacted', 'compact_learned', 'history_health', 'health_findings', 'issue_drafts', 'load_fixed',
-           'record_fix', 'run_check', 'check_lines', 'fixed_cli', 'lesson_candidates', 'tried_sessions', 'NightFailed',
-           'night_error', 'nightly']
+           'LOG_MAX_MB', 'LOG_GROWTH_MB', 'DEFECT_MAX', 'ROW_MAX_MB', 'FIXED', 'EFF_DAYS', 'EFF_CALLS', 'EFF_HABIT',
+           'NIGHTLY', 'FAILED', 'FAILED_TRIES', 'scrub', 'replay_clone', 'run_turn', 'route_cost', 'delivered',
+           'better', 'check_learned', 'learned_repo', 'keep', 'committed_copy', 'lesson_entry', 'keep_lesson',
+           'trajectory_md', 'findings_md', 'recent_lessons', 'lessons_md', 'refused_commands', 'ran_commands',
+           'judge_prompt', 'judge_reply', 'round_cost', 'improve_round', 'request_text', 'session_start', 'trainable',
+           'trainable_sessions', 'BatchBusy', 'learned_lock', 'improve_batch', 'improve_cli', 'expire_dated',
+           'expire_learned', 'compaction_prompt', 'compacted', 'compact_learned', 'history_health', 'health_findings',
+           'issue_drafts', 'load_fixed', 'record_fix', 'run_check', 'check_lines', 'fixed_cli', 'lesson_candidates',
+           'efficiency_of', 'efficiency_findings', 'efficiency', 'tried_sessions', 'NightFailed', 'night_error',
+           'nightly']
 
 # %% ../nbs/04_improve.ipynb #1dd2fce7
 import hashlib, importlib, io, json, os, random, re, shutil, subprocess, sys, tarfile, tempfile, time
@@ -54,7 +55,7 @@ def replay_clone(start, dest):
     "A throwaway clone of `start['repo']` checked out at `start['head']`, in `dest`."
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    for cmd in (['git', 'clone', '-q', '--no-hardlinks', start['repo'], str(dest)],   # a replay's edits never reach the source's objects
+    for cmd in (['git', 'clone', '-q', '--shared', start['repo'], str(dest)],   # reads the source's objects, writes its own: nothing is copied, and the source is never written
                 ['git', '-C', str(dest), 'checkout', '-q', '--detach', start['head']],
                 ['git', '-C', str(dest), 'remote', 'remove', 'origin']):   # a push from a replay has nowhere to go
         if (p := subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True)).returncode:
@@ -405,8 +406,11 @@ def improve_round(
     if learned is not None and Path(learned).exists(): committed_copy(learned, current)
     else: current.mkdir(parents=True)
     if (bad := check_learned(current)): raise ValueError(f'{learned} holds files a learned folder may not: {bad}')
-    def run(name, folder): return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, approve, exe=exe,
-                                           timeout=timeout, read_outside=read_outside, max_cost=max(limit - round_cost(work), 0))
+    def run(name, folder):
+        "One replay in its own checkout, which goes once the run ends: what later steps read is the run's record."
+        try: return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, approve, exe=exe,
+                             timeout=timeout, read_outside=read_outside, max_cost=max(limit - round_cost(work), 0))
+        finally: shutil.rmtree(work/name/'repo', ignore_errors=True)
     bases = []
     for n in range(1, k+1):
         if limit - round_cost(work) < MIN_RUN: break
@@ -1015,6 +1019,66 @@ def lesson_candidates(h, work):
     p.write_text(lessons_md(rows))
     return p
 
+# %% ../nbs/04_improve.ipynb #7afb695c
+EFF_DAYS = 3     #: days of history the efficiency check reads
+EFF_CALLS = 30   #: tool calls per turn past which turns count as costly: each call re-reads the whole context
+EFF_HABIT = 20   #: times a wasteful habit may occur in the window before a night reports it
+
+_SEARCH = re.compile(r'^\s*(?:grep|rg|find|ls|cat|head|tail|sed|wc)\b')
+_REDIRECT = re.compile(r'>\s*/tmp/\S+\s+2>')
+_SLEEP = re.compile(r'\bsleep\s+\d')
+_TESTS = re.compile(r'pytest|nbdev-test|nbdev_test')
+_EDITS = {'replace_text', 'create_file', 'edit_cell', 'add_cell', 'edit_file'}
+
+def efficiency_of(rows):
+    "Tool calls, input tokens and wasteful habits over history `rows`, one turn per `turn_id` with its last row counting."
+    turns = {}
+    for r in rows: turns[r.get('turn_id') or id(r)] = r
+    e = Counter(dict.fromkeys(('calls', 'shell', 'shell_search', 'redirects', 'sleeps', 'test_reruns', 'memory_writes', 'memory_reads'), 0))
+    inp = 0
+    for t in turns.values():
+        acts = [a for a in t.get('activity') or [] if isinstance(a, dict)]
+        e['calls'] += len(acts); inp += _usage(t).get('input') or 0
+        tests = Counter()   # test commands since the last edit
+        for a in acts:
+            tool = a.get('tool')
+            if tool == 'remember': e['memory_writes'] += 1
+            elif tool in ('memory_search', 'memory_read', 'ask_memory'): e['memory_reads'] += 1
+            elif tool in _EDITS: tests.clear()
+            if tool != 'run_shell': continue
+            cmd = str(tool_args(a).get('command') or '')
+            e['shell'] += 1
+            e['shell_search'] += bool(_SEARCH.match(cmd))
+            e['redirects'] += bool(_REDIRECT.search(cmd))
+            e['sleeps'] += bool(_SLEEP.search(cmd))
+            if _TESTS.search(cmd):
+                e['test_reruns'] += bool(tests[cmd]); tests[cmd] += 1
+    return dict(e, turns=len(turns), calls_per_turn=e['calls'] / max(len(turns), 1), input_per_turn=inp // max(len(turns), 1))
+
+def efficiency_findings(e, calls=EFF_CALLS, habit=EFF_HABIT):
+    "A night's lines for each threshold `e` crosses: costly turns, and each wasteful habit seen more than `habit` times."
+    lines = []
+    if e['calls_per_turn'] > calls:
+        lines.append(f"turns averaged {e['calls_per_turn']:.0f} tool calls and {e['input_per_turn']:,} input tokens over {e['turns']} turns, past {calls} calls")
+    for key, what in (('shell_search', 'shell calls only searched or listed files, which the grep and ls tools do'),
+                      ('redirects', 'shell calls redirected output to /tmp files to read back, though run_shell returns it'),
+                      ('sleeps', 'shell calls slept to wait for background work, which reports when it finishes'),
+                      ('test_reruns', 'test commands were rerun with no edit between')):
+        if e[key] > habit: lines.append(f'{e[key]} {what}')
+    if e['memory_writes'] > habit and e['memory_writes'] > 2 * e['memory_reads']:
+        lines.append(f"{e['memory_writes']} memory writes against {e['memory_reads']} reads: notes are written and not read back")
+    return lines
+
+def efficiency(cfg='~/.config/ramabana', days=EFF_DAYS, now=None):
+    "`efficiency_of` the turns of the last `days` in `cfg`'s history."
+    now, rows = time.time() if now is None else now, []
+    with open(Path(cfg).expanduser()/'agent-history.jsonl', 'rb') as f:
+        for line in f:
+            try: t = json.loads(line)
+            except ValueError: continue
+            if isinstance(t, dict) and now - days*86400 < _epoch(t.get('at')) <= now: rows.append(t)
+    return efficiency_of(rows)
+
 # %% ../nbs/04_improve.ipynb #95987ee7
 NIGHTLY = '~/.cache/dhrona/nightly'   #: where scheduled batches write, one folder a night
 
@@ -1049,6 +1113,8 @@ def _health_lines(cfg, work=None, fixed=None):
     lines, defects = health_findings(h)
     if work is not None and defects: issue_drafts(defects, work, h['days']); lines.append(f"issue drafts in {Path(work)/'issues'}")
     if work is not None and (p := lesson_candidates(h, work)): lines.append(f'lesson candidates in {p}')
+    try: lines += efficiency_findings(efficiency(cfg))
+    except OSError as e: lines.append(f'efficiency check unavailable: {e}')
     return lines
 
 def nightly(fire):
