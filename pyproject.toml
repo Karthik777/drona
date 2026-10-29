@@ -31,6 +31,9 @@ dhrona-export = "dhrona.sessions:export_cli"
 dhrona-tools = "dhrona.tools:tools_cli"
 dhrona-improve = "dhrona.improve:improve_cli"
 dhrona-fixed = "dhrona.improve:fixed_cli"
+dhrona-evolve = "dhrona.evolve:evolve_cli"
+dhrona-versions = "dhrona.evolve:versions_cli"
+dhrona-export-learned = "dhrona.evolve:export_cli"
 
 [project.urls]
 Repository = "https://github.com/Karthik777/drona"

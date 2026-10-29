@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## Unreleased
+
+- `dhrona.evolve`, after Hermit: evolve the learned folder over many tasks with a held-out split, an empty-folder and starting-folder baseline, pluggable evolvers (`reflect`, `agent`, `@evolver`), a gate on every proposal, `pending/` versions with `restore`, and an export for Codex and Claude Code.
+- New commands: `dhrona-evolve`, `dhrona-versions`, `dhrona-export-learned`.
+
 ## 0.1.22
 
 - No replay or round starts with less than $0.25 left. A Claude Code run cannot stop exactly at its `--max-cost`, so a run that starts with a few cents left can go past the limit.
