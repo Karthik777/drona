@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.1.23
+
+- A night's note now reports what the turns cost. `efficiency` reads the last `EFF_DAYS` days of history, and `efficiency_findings` adds a line for each threshold crossed: turns past `EFF_CALLS` tool calls, and each wasteful habit seen more than `EFF_HABIT` times. The habits are shell calls that only search or list files, shell output written to `/tmp` and read back, sleeps that wait for background work, a test rerun with no edit between, and memory notes written much more often than read.
+- A replay clones its repository with `--shared`, so no objects are copied, and its checkout is deleted when its run ends. Later steps read only the run's record. Before, each round kept three full clones, and ten nights grew the cache to 43 GB.
+
 ## 0.1.22
 
 - No replay or round starts with less than $0.25 left. A Claude Code run cannot stop exactly at its `--max-cost`, so a run that starts with a few cents left can go past the limit.
