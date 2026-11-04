@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.1.24
+
+- The learned folder may hold `checklist.md`, up to `CHECKLIST_MAX` (1,500) characters, one item per `- ` line. Ramabana's checklist mod offers these items to a person to pin. A symlinked `checklist.md` is refused.
+- New `recent_checklist(cfg, days)` reads the checklist tool's calls from recent session histories. It counts, for each item text, how often the item was checked, skipped, added or blocked. A refused call counts as blocked, not as checked. The editor sees these counts as `checklist.md` in its evidence.
+- New `keep_checklist(learned, items, message)` adds the items that `checklist.md` lacks on a new `pending/<id>` branch, for a person to review. It gives `None` when nothing is new, and it never writes through a symlink.
+- A round that is adopted puts its new checklist lines up for review on their own `pending/` branch. Lines the editor removed are not proposed.
+
 ## 0.1.23
 
 - A night's note now reports what the turns cost. `efficiency` reads the last `EFF_DAYS` days of history, and `efficiency_findings` adds a line for each threshold crossed: turns past `EFF_CALLS` tool calls, and each wasteful habit seen more than `EFF_HABIT` times. The habits are shell calls that only search or list files, shell output written to `/tmp` and read back, sleeps that wait for background work, a test rerun with no edit between, and memory notes written much more often than read.
