@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.1.25
+
+- `improve_batch` checks the learned folder's committed HEAD once, before it picks any session. A folder that fails `check_learned`, such as an `AGENTS.md` over `LEARNED_MAX` characters, refuses the whole night. `nightly` returns one note that starts with `night refused` and names the problem. No session is used up. Before, each round failed on its own, and after `FAILED_TRIES` such nights every session in them counted as tried and was never replayed.
+- New `start_folder(learned, dest)` copies the learned folder's committed HEAD to `dest` and raises `ValueError` when the copy fails `check_learned`. `improve_round` and `improve_batch` both use it.
+
 ## 0.1.24
 
 - The learned folder may hold `checklist.md`, up to `CHECKLIST_MAX` (1,500) characters, one item per `- ` line. Ramabana's checklist mod offers these items to a person to pin. A symlinked `checklist.md` is refused.

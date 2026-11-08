@@ -12,12 +12,12 @@ __all__ = ['RAMABANA', 'LEARNED_MAX', 'SCRUB_KINDS', 'DATED', 'DATED_MAX', 'DATE
            'run_turn', 'route_cost', 'delivered', 'better', 'check_learned', 'learned_repo', 'keep', 'committed_copy',
            'lesson_entry', 'keep_lesson', 'new_checklist_lines', 'keep_checklist', 'trajectory_md', 'findings_md',
            'recent_lessons', 'recent_checklist', 'checklist_md', 'lessons_md', 'refused_commands', 'ran_commands',
-           'checklist_calls', 'judge_prompt', 'judge_reply', 'round_cost', 'improve_round', 'request_text',
-           'session_start', 'trainable', 'trainable_sessions', 'BatchBusy', 'learned_lock', 'improve_batch',
-           'improve_cli', 'expire_dated', 'expire_learned', 'compaction_prompt', 'compacted', 'compact_learned',
-           'history_health', 'health_findings', 'issue_drafts', 'load_fixed', 'record_fix', 'run_check', 'check_lines',
-           'fixed_cli', 'lesson_candidates', 'efficiency_of', 'efficiency_findings', 'efficiency', 'tried_sessions',
-           'NightFailed', 'night_error', 'nightly']
+           'checklist_calls', 'judge_prompt', 'judge_reply', 'round_cost', 'start_folder', 'improve_round',
+           'request_text', 'session_start', 'trainable', 'trainable_sessions', 'BatchBusy', 'learned_lock',
+           'improve_batch', 'improve_cli', 'expire_dated', 'expire_learned', 'compaction_prompt', 'compacted',
+           'compact_learned', 'history_health', 'health_findings', 'issue_drafts', 'load_fixed', 'record_fix',
+           'run_check', 'check_lines', 'fixed_cli', 'lesson_candidates', 'efficiency_of', 'efficiency_findings',
+           'efficiency', 'tried_sessions', 'NightFailed', 'night_error', 'nightly']
 
 # %% ../nbs/04_improve.ipynb #1dd2fce7
 import hashlib, importlib, io, json, os, random, re, shutil, subprocess, sys, tarfile, tempfile, time
@@ -452,6 +452,13 @@ def round_cost(work):
 ROUND_LIMIT = 8   #: dollars: a round stops once the runs it has recorded cost more than this
 MIN_RUN = 0.25    #: dollars a run needs left in the round to start: a Claude Code run reports its cost only at its end, so `--max-cost` cannot stop it in time
 
+def start_folder(learned, dest):
+    "Copy `learned`'s committed HEAD to `dest`, with `checklist.md` reduced to its `- ` items; raises `ValueError` when the copy breaks `check_learned`."
+    if learned is not None and Path(learned).exists(): committed_copy(learned, dest)
+    else: dest.mkdir(parents=True)
+    if (f := dest/'checklist.md').is_file() and not f.is_symlink(): f.write_text(''.join(l + '\n' for l in f.read_text().splitlines() if l.startswith('- ')))
+    if (bad := check_learned(dest)): raise ValueError(f'{learned} holds files a learned folder may not: {bad}')
+
 def improve_round(
     prompt,         # the request to replay
     start,          # `{repo, head, dirty}` from the session's `start.json`
@@ -476,10 +483,7 @@ def improve_round(
     work = Path(work)
     if work.exists(): raise FileExistsError(f'{work} exists; a round writes into a new folder')
     current, cand, ev = work/'current', work/'candidate', work/'evidence'
-    if learned is not None and Path(learned).exists(): committed_copy(learned, current)
-    else: current.mkdir(parents=True)
-    if (f := current/'checklist.md').is_file() and not f.is_symlink(): f.write_text(''.join(l + '\n' for l in f.read_text().splitlines() if l.startswith('- ')))
-    if (bad := check_learned(current)): raise ValueError(f'{learned} holds files a learned folder may not: {bad}')
+    start_folder(learned, current)
     def run(name, folder):
         "One replay in its own checkout, which goes once the run ends: what later steps read is the run's record."
         try: return run_turn(prompt, [replay_clone(start, work/name/'repo')], work/name/'cfg', model, folder, approve, exe=exe,
@@ -666,6 +670,8 @@ def improve_batch(
         try:
             expired = expire_learned(learned, cfg, days) if learned is not None and cfg is not None else []
             compaction = _due_compaction(learned, compact_at, _editor(editor, exe)) if learned is not None else None
+            if learned is not None:
+                with tempfile.TemporaryDirectory() as t: start_folder(learned, Path(t)/'head')   # once here, or every round fails and its session counts as tried
             lessons = recent_lessons(cfg, days) if cfg is not None else []
             checklist = recent_checklist(cfg, days) if cfg is not None else []
             picked = [s for s in (trainable_sessions() if sessions is None else sessions)
