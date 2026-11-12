@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.1.26
+
+- Dhrona imports `chat2dlg` and `dlg2chat` from aihist. aidialog 0.0.38 moved them out of `aidialog.hist`, and aihist is now on PyPI.
+- The cap below aidialog 0.0.38 is removed. Dhrona needs aidialog 0.0.42, aihist 0.1.6 and llmsurgery 0.0.19. Thus `ramabana[dhrona]` installs with rishi 0.1.71.
+
 ## 0.1.25
 
 - `improve_batch` checks the learned folder's committed HEAD once, before it picks any session. A folder that fails `check_learned`, such as an `AGENTS.md` over `LEARNED_MAX` characters, refuses the whole night. `nightly` returns one note that starts with `night refused` and names the problem. No session is used up. Before, each round failed on its own, and after `FAILED_TRIES` such nights every session in them counted as tried and was never replayed.

@@ -14,7 +14,7 @@ from dataclasses import asdict
 from fastcore.xtras import Path
 import json, shlex, subprocess
 from aidialog.dialog import Dialog, snote, sprompt
-from aidialog.hist import chat2dlg, dlg2chat
+from aihist import chat2dlg, dlg2chat
 from aidialog.ipynb import read_ipynb, write_ipynb
 from aidialog.msg_parts import Msg, Text, ToolUse, ToolResult
 from fastcore.script import call_parse

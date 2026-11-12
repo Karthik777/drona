@@ -15,8 +15,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ["fastcore>=2.1.16", "uraiyadal>=0.0.1", "llmsurgery>=0.0.13",
-                "aidialog>=0.0.22,<0.0.38",   # 0.0.38 moves `aidialog.hist` to aihist, which is not on PyPI and which llmsurgery does not use yet
+dependencies = ["fastcore>=2.1.16", "uraiyadal>=0.0.1",
+                "llmsurgery>=0.0.19",   # imports `chat2dlg` from aihist and asks for aidialog 0.0.41 or later
+                "aidialog>=0.0.42", "aihist>=0.1.6",   # `chat2dlg` and `dlg2chat` moved from `aidialog.hist` to aihist
                 "shalya>=0.1.14",   # `parse_lesson`, `lesson_text`
                 "rahasya>=0.0.5",   # `redact`, before the editor and the judge
                 "ramabana>=0.2.90"]   # `--no-read-outside` and `--no-vault`, which every replay is given; `--max-cost` stops a Claude Code run in time since 0.2.90
